@@ -126,6 +126,36 @@
       line-height: 1.8;
       font-size: 14px;
     }
+    .source-status-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+      padding: 14px 16px;
+    }
+    .source-status-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      background: #f8fafc;
+    }
+    .source-status-item span {
+      display: block;
+      color: var(--muted);
+      font-size: 12px;
+      margin-bottom: 5px;
+    }
+    .source-status-item strong {
+      color: var(--ink);
+      font-size: 14px;
+    }
+    .source-status-item.ok {
+      border-color: rgba(5, 150, 105, 0.24);
+      background: var(--pos-bg);
+    }
+    .source-status-item.bad {
+      border-color: rgba(214, 39, 40, 0.24);
+      background: var(--neg-bg);
+    }
     .table-wrap {
       position: relative;
       overflow-x: auto;
@@ -369,6 +399,7 @@
       h1 { font-size: 24px; }
       .stamp { text-align: left; }
       .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .source-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .metric-card { padding: 12px; }
       .metric-value { font-size: 23px; }
       .panel-head { align-items: flex-start; flex-direction: column; gap: 4px; }
@@ -392,7 +423,7 @@
         <h1>铜库存日报</h1>
         <div class="subtle">过去 15 个有效更新日，报告日已高亮</div>
       </div>
-      <div class="stamp">生成时间：2026-07-24<br>来源：备用表、Wind、上期所仓单日报</div>
+      <div class="stamp">生成时间：2026-07-24<br>来源：备用表、截图、Wind、上期所网页</div>
     </div>
 
     <div class="cards">
@@ -439,6 +470,21 @@
         <li>广东库存 16,991 吨，较上一期 -943 吨。</li>
       </ul>
     </section>
+
+    
+    <section class="panel source-status">
+      <div class="panel-head">
+        <h2 class="panel-title">数据源校验</h2>
+        <span class="subtle">覆盖日期：2026-07-24、2026-07-27、2026-07-28、2026-07-29、2026-07-30</span>
+      </div>
+      <div class="source-status-grid">
+        <div class="source-status-item ok"><span>Wind 数据</span><strong>已刷新</strong></div>
+        <div class="source-status-item ok"><span>上期所网页</span><strong>已抓取</strong></div>
+        <div class="source-status-item ok"><span>截图数据</span><strong>已写入备份表</strong></div>
+        <div class="source-status-item ok"><span>Excel 公式</span><strong>已保留并设置重算</strong></div>
+      </div>
+    </section>
+    
 
     <section class="panel">
       <div class="panel-head">
