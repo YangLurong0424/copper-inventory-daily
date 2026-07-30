@@ -65,6 +65,34 @@
       font-size: 13px;
       color: var(--muted);
     }
+    .traffic-stats {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(92px, 1fr));
+      gap: 8px;
+      color: var(--ink);
+    }
+    .traffic-chip {
+      border: 1px solid rgba(37, 99, 235, 0.16);
+      background: rgba(255, 255, 255, 0.78);
+      border-radius: 10px;
+      padding: 7px 9px;
+      min-width: 0;
+    }
+    .traffic-label {
+      display: block;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.15;
+      margin-bottom: 3px;
+    }
+    .traffic-value {
+      color: var(--blue);
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.15;
+      font-variant-numeric: tabular-nums;
+    }
     .cards {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -398,6 +426,7 @@
       .topbar { align-items: flex-start; flex-direction: column; gap: 10px; }
       h1 { font-size: 24px; }
       .stamp { text-align: left; }
+      .traffic-stats { grid-template-columns: repeat(2, minmax(120px, 1fr)); width: 100%; }
       .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .source-status-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .metric-card { padding: 12px; }
@@ -414,6 +443,7 @@
       .filter-check { padding: 6px 8px; }
     }
   </style>
+  <script defer src="https://cdn.busuanzi.cc/busuanzi/3.6.9/busuanzi.min.js"></script>
 </head>
 <body>
   <main class="page">
@@ -423,7 +453,27 @@
         <h1>铜库存日报</h1>
         <div class="subtle">过去 15 个有效更新日，报告日已高亮</div>
       </div>
-      <div class="stamp">生成时间：2026-07-24<br>来源：备用表、截图、Wind、上期所网页</div>
+      <div class="stamp">
+        生成时间：2026-07-24<br>来源：备用表、截图、Wind、上期所网页
+        <div class="traffic-stats" aria-label="网站访问统计">
+          <div class="traffic-chip">
+            <span class="traffic-label">今日访问</span>
+            <span class="traffic-value" id="busuanzi_today_pv">--</span>
+          </div>
+          <div class="traffic-chip">
+            <span class="traffic-label">今日访客</span>
+            <span class="traffic-value" id="busuanzi_today_uv">--</span>
+          </div>
+          <div class="traffic-chip">
+            <span class="traffic-label">累计访问</span>
+            <span class="traffic-value" id="busuanzi_site_pv">--</span>
+          </div>
+          <div class="traffic-chip">
+            <span class="traffic-label">累计访客</span>
+            <span class="traffic-value" id="busuanzi_site_uv">--</span>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="cards">
