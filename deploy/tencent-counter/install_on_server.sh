@@ -9,14 +9,26 @@ if [[ "$(id -u)" -ne 0 ]]; then
   exit 1
 fi
 
-apt-get update
-apt-get install -y python3 python3-venv python3-pip nginx curl rsync
+if command -v apt-get >/dev/null 2>&1; then
+  apt-get update
+  apt-get install -y python3 python3-venv python3-pip nginx curl rsync unzip
+elif command -v dnf >/dev/null 2>&1; then
+  dnf install -y python3 python3-pip nginx curl rsync unzip
+elif command -v yum >/dev/null 2>&1; then
+  yum install -y python3 python3-pip nginx curl rsync unzip
+else
+  echo "No supported package manager found. Need apt-get, dnf, or yum." >&2
+  exit 1
+fi
 
 mkdir -p "$APP_DIR"
 rsync -a --delete "$SRC_DIR/app/" "$APP_DIR/app/"
 cp "$SRC_DIR/app/requirements.txt" "$APP_DIR/requirements.txt"
 
-python3 -m venv "$APP_DIR/venv"
+if ! python3 -m venv "$APP_DIR/venv"; then
+  python3 -m pip install virtualenv
+  python3 -m virtualenv "$APP_DIR/venv"
+fi
 "$APP_DIR/venv/bin/pip" install --upgrade pip
 "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
@@ -27,10 +39,16 @@ cp "$SRC_DIR/copper-counter.service" /etc/systemd/system/copper-counter.service
 systemctl daemon-reload
 systemctl enable --now copper-counter.service
 
-cp "$SRC_DIR/nginx-copper-counter.conf" /etc/nginx/sites-available/copper-counter.conf
-ln -sf /etc/nginx/sites-available/copper-counter.conf /etc/nginx/sites-enabled/copper-counter.conf
+cp "$SRC_DIR/nginx-copper-counter.conf" /etc/nginx/conf.d/copper-counter.conf
 nginx -t
+systemctl enable --now nginx
 systemctl reload nginx
+
+if command -v firewall-cmd >/dev/null 2>&1; then
+  systemctl enable --now firewalld >/dev/null 2>&1 || true
+  firewall-cmd --add-service=http --permanent >/dev/null 2>&1 || true
+  firewall-cmd --reload >/dev/null 2>&1 || true
+fi
 
 echo "Deploy finished. Service status:"
 systemctl --no-pager --full status copper-counter.service || true
