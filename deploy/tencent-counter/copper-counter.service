@@ -1,0 +1,18 @@
+[Unit]
+Description=Copper Inventory Visit Counter
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/copper-counter
+Environment=COUNTER_APP_DIR=/opt/copper-counter
+Environment=COUNTER_DB_PATH=/opt/copper-counter/counter.db
+Environment=COUNTER_ALLOWED_ORIGINS=https://yanglurong0424.github.io
+ExecStart=/opt/copper-counter/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8008
+Restart=always
+RestartSec=3
+User=www-data
+Group=www-data
+
+[Install]
+WantedBy=multi-user.target
