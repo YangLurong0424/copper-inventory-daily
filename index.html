@@ -444,6 +444,47 @@
     }
   </style>
 
+  <script>
+    window.addEventListener("DOMContentLoaded", async () => {
+      const endpoint = "http://106.54.200.6/copper-counter";
+      const setText = (id, value) => {
+        const node = document.getElementById(id);
+        if (node) node.textContent = value == null ? "--" : Number(value).toLocaleString("zh-CN");
+      };
+      try {
+        const visitorKey = "copper_inventory_daily_visitor_id";
+        let visitorId = localStorage.getItem(visitorKey);
+        if (!visitorId) {
+          visitorId = crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + "-" + Math.random().toString(16).slice(2);
+          localStorage.setItem(visitorKey, visitorId);
+        }
+        const payload = {
+          site: "copper-inventory-daily",
+          path: location.pathname || "/",
+          date: new Date().toISOString().slice(0, 10),
+          visitor_id: visitorId
+        };
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error("counter api failed");
+        const data = await response.json();
+        setText("visit_today_pv", data.today_pv);
+        setText("visit_today_uv", data.today_uv);
+        setText("visit_total_pv", data.total_pv);
+        setText("visit_total_uv", data.total_uv);
+      } catch (error) {
+        setText("visit_today_pv", null);
+        setText("visit_today_uv", null);
+        setText("visit_total_pv", null);
+        setText("visit_total_uv", null);
+      }
+    });
+  </script>
+
 </head>
 <body>
   <main class="page">
@@ -458,19 +499,19 @@
         <div class="traffic-stats" aria-label="网站访问统计">
           <div class="traffic-chip">
             <span class="traffic-label">今日访问</span>
-            <span class="traffic-value" id="visit_today_pv">未接入</span>
+            <span class="traffic-value" id="visit_today_pv">--</span>
           </div>
           <div class="traffic-chip">
             <span class="traffic-label">今日访客</span>
-            <span class="traffic-value" id="visit_today_uv">未接入</span>
+            <span class="traffic-value" id="visit_today_uv">--</span>
           </div>
           <div class="traffic-chip">
             <span class="traffic-label">累计访问</span>
-            <span class="traffic-value" id="visit_total_pv">未接入</span>
+            <span class="traffic-value" id="visit_total_pv">--</span>
           </div>
           <div class="traffic-chip">
             <span class="traffic-label">累计访客</span>
-            <span class="traffic-value" id="visit_total_uv">未接入</span>
+            <span class="traffic-value" id="visit_total_uv">--</span>
           </div>
         </div>
       </div>
