@@ -11,8 +11,8 @@ Environment=COUNTER_ALLOWED_ORIGINS=https://yanglurong0424.github.io
 ExecStart=/opt/copper-counter/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8008
 Restart=always
 RestartSec=3
-User=www-data
-Group=www-data
+User=copper-counter
+Group=copper-counter
 
 [Install]
 WantedBy=multi-user.target

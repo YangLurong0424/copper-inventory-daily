@@ -32,8 +32,12 @@ fi
 "$APP_DIR/venv/bin/pip" install --upgrade pip
 "$APP_DIR/venv/bin/pip" install -r "$APP_DIR/requirements.txt"
 
+if ! id copper-counter >/dev/null 2>&1; then
+  useradd --system --home-dir "$APP_DIR" --shell /sbin/nologin copper-counter
+fi
+
 touch "$APP_DIR/counter.db"
-chown -R www-data:www-data "$APP_DIR"
+chown -R copper-counter:copper-counter "$APP_DIR"
 
 cp "$SRC_DIR/copper-counter.service" /etc/systemd/system/copper-counter.service
 systemctl daemon-reload
