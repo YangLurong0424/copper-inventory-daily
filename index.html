@@ -477,10 +477,9 @@
         setText("visit_total_pv", data.total_pv);
         setText("visit_total_uv", data.total_uv);
       } catch (error) {
-        setText("visit_today_pv", null);
-        setText("visit_today_uv", null);
-        setText("visit_total_pv", null);
-        setText("visit_total_uv", null);
+        document.querySelectorAll(".traffic-value").forEach((node) => {
+          node.title = "实时统计接口暂不可用，当前显示发布时快照";
+        });
       }
     });
   </script>
@@ -495,23 +494,23 @@
         <div class="subtle">过去 15 个有效更新日，报告日已高亮</div>
       </div>
       <div class="stamp">
-        生成时间：2026-07-24<br>来源：备用表、截图、Wind、上期所网页
+        生成时间：2026-08-03 09:42<br>来源：备用表、截图、Wind、上期所网页
         <div class="traffic-stats" aria-label="网站访问统计">
           <div class="traffic-chip">
             <span class="traffic-label">今日访问</span>
-            <span class="traffic-value" id="visit_today_pv">--</span>
+            <span class="traffic-value" id="visit_today_pv">3</span>
           </div>
           <div class="traffic-chip">
             <span class="traffic-label">今日访客</span>
-            <span class="traffic-value" id="visit_today_uv">--</span>
+            <span class="traffic-value" id="visit_today_uv">3</span>
           </div>
           <div class="traffic-chip">
             <span class="traffic-label">累计访问</span>
-            <span class="traffic-value" id="visit_total_pv">--</span>
+            <span class="traffic-value" id="visit_total_pv">5</span>
           </div>
           <div class="traffic-chip">
             <span class="traffic-label">累计访客</span>
-            <span class="traffic-value" id="visit_total_uv">--</span>
+            <span class="traffic-value" id="visit_total_uv">4</span>
           </div>
         </div>
       </div>
