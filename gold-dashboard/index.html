@@ -723,11 +723,14 @@ a { color: inherit; }
 
 .chart-resizer {
   position: relative;
-  width: 38px;
-  padding: 0;
+  width: auto;
+  min-width: 78px;
+  padding: 0 27px 0 10px;
   cursor: nwse-resize;
   touch-action: none;
 }
+
+.chart-resizer strong { font: inherit; white-space: nowrap; }
 
 .chart-resizer span {
   position: absolute;
@@ -1067,7 +1070,7 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
   .chart-size-tools { padding-inline: 12px; }
   .size-tool,
   .chart-resizer { min-width: 44px; min-height: 44px; }
-  .chart-resizer { width: 44px; }
+  .chart-resizer { width: auto; min-width: 92px; }
   .navigator { height: 64px; }
   .preset-row {
     justify-content: flex-start;
@@ -1734,10 +1737,10 @@ function cardHtml(chart) {
     ${reportAnnotationHtml(chart)}
     <div class="legend" aria-label="图例"></div>
     <div class="chart-size-tools" aria-label="截图尺寸">
-      <span class="chart-size-label"><b>截图尺寸</b><small class="size-readout"></small></span>
+      <span class="chart-size-label"><b>截图尺寸 · 可拖动</b><small class="size-readout"></small></span>
       <button class="size-tool size-wide" type="button" data-size-action="wide" aria-pressed="false" title="在半栏和整栏之间切换">宽屏</button>
       <button class="size-tool" type="button" data-size-action="reset" title="恢复默认图表尺寸">重置</button>
-      <button class="chart-resizer" type="button" aria-label="调整图表大小：左右拖动切换半宽或整宽，上下拖动调整高度；方向键也可调整" title="拖动调整宽高；方向键调整，Home重置"><span aria-hidden="true"></span></button>
+      <button class="chart-resizer" type="button" aria-label="调整图表大小：左右拖动切换半宽或整宽，上下拖动调整高度；方向键也可调整" title="上下拖动调整高度；电脑端左右拖动切换宽度"><strong>拖动调大小</strong><span aria-hidden="true"></span></button>
       <span class="resize-announcer sr-only" aria-live="polite"></span>
     </div>
     <div class="chart-stage">
