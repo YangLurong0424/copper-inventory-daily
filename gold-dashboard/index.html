@@ -655,7 +655,9 @@ a { color: inherit; }
   flex-wrap: wrap;
   gap: 6px 12px;
   min-height: 26px;
-  padding: 0 18px 8px;
+  padding: 10px 12px 7px;
+  border-bottom: 1px solid #efede7;
+  background: #fff;
 }
 
 .legend-button {
@@ -747,8 +749,17 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
 .chart-stage {
   position: relative;
   height: clamp(240px, var(--chart-height, 292px), 720px);
+  margin: 0;
+  background: #fff;
+}
+
+.chart-visual {
   margin: 0 10px;
-  border-top: 1px solid #efede7;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #e8e4d8;
+  border-radius: 9px;
   background: #fff;
 }
 
@@ -792,7 +803,7 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
 
 .navigator {
   height: 56px;
-  margin: 0 10px;
+  margin: 0;
   border-top: 1px solid #efede7;
   border-bottom: 1px solid #efede7;
   background: #f9f8f4;
@@ -1097,7 +1108,7 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
   .file-button, .button { padding-inline: 10px; }
   .card-head { padding-inline: 14px; }
   .legend { padding-inline: 14px; }
-  .chart-stage, .navigator { margin-inline: 4px; }
+  .chart-visual { margin-inline: 4px; }
   .chart-size-tools { padding-inline: 10px; }
   .range-help { display: none; }
   .indicator-name { align-items: flex-start; flex-direction: column; gap: 2px; }
@@ -1735,20 +1746,22 @@ function cardHtml(chart) {
      </header>
     ${quality.level !== "ok" ? `<div class="quality-banner ${escapeHtml(quality.level)}"><strong>数据质量：</strong>${escapeHtml(quality.message)}</div>` : ""}
     ${reportAnnotationHtml(chart)}
-    <div class="legend" aria-label="图例"></div>
     <div class="chart-size-tools" aria-label="截图尺寸">
-      <span class="chart-size-label"><b>截图尺寸 · 可拖动</b><small class="size-readout"></small></span>
+      <span class="chart-size-label"><b>截图框（含图例） · 可拖动</b><small class="size-readout"></small></span>
       <button class="size-tool size-wide" type="button" data-size-action="wide" aria-pressed="false" title="在半栏和整栏之间切换">宽屏</button>
       <button class="size-tool" type="button" data-size-action="reset" title="恢复默认图表尺寸">重置</button>
-      <button class="chart-resizer" type="button" aria-label="调整图表大小：左右拖动切换半宽或整宽，上下拖动调整高度；方向键也可调整" title="上下拖动调整高度；电脑端左右拖动切换宽度"><strong>拖动调大小</strong><span aria-hidden="true"></span></button>
+      <button class="chart-resizer" type="button" aria-label="调整含图例的图形大小：左右拖动切换半宽或整宽，上下拖动调整高度；方向键也可调整" title="上下拖动调整含图例的图形高度；电脑端左右拖动切换宽度"><strong>拖动调大小</strong><span aria-hidden="true"></span></button>
       <span class="resize-announcer sr-only" aria-live="polite"></span>
     </div>
-    <div class="chart-stage">
-      <canvas class="main-chart" tabindex="0" role="img" aria-label="${escapeHtml(chart.title)} 时间序列图；滚轮缩放，拖动平移"></canvas>
-      <div class="chart-tooltip" aria-hidden="true"></div>
+    <div class="chart-visual" data-screenshot-frame="true">
+      <div class="legend" aria-label="图例"></div>
+      <div class="chart-stage">
+        <canvas class="main-chart" tabindex="0" role="img" aria-label="${escapeHtml(chart.title)} 时间序列图；滚轮缩放，拖动平移"></canvas>
+        <div class="chart-tooltip" aria-hidden="true"></div>
+      </div>
+      <div class="navigator"><canvas class="nav-chart" tabindex="0" aria-label="${escapeHtml(chart.title)} 时间范围选择器；拖动窗口或两侧把手"></canvas></div>
+      <div class="preset-row"><span class="range-status"><b class="range-date" aria-live="polite"></b><small class="range-help">滚轮缩放 · 拖动平移 · 下方拖拽范围</small></span>${["1M", "3M", "6M", "1Y", "3Y", "ALL"].map((x) => `<button type="button" data-preset="${x}" class="${x === state.range ? "active" : ""}">${PRESET_LABELS[x]}</button>`).join("")}</div>
     </div>
-    <div class="navigator"><canvas class="nav-chart" tabindex="0" aria-label="${escapeHtml(chart.title)} 时间范围选择器；拖动窗口或两侧把手"></canvas></div>
-    <div class="preset-row"><span class="range-status"><b class="range-date" aria-live="polite"></b><small class="range-help">滚轮缩放 · 拖动平移 · 下方拖拽范围</small></span>${["1M", "3M", "6M", "1Y", "3Y", "ALL"].map((x) => `<button type="button" data-preset="${x}" class="${x === state.range ? "active" : ""}">${PRESET_LABELS[x]}</button>`).join("")}</div>
     <div class="metric-wrap"><table class="metric-table"><thead><tr><th>序列</th><th>数据日</th><th>最新</th><th>近一周</th><th>近一月</th></tr></thead><tbody>${metricRows(chart)}</tbody></table></div>
     ${indicatorGuideHtml(chart)}
     <div class="analysis-grid">
@@ -1800,6 +1813,7 @@ class CanvasTimeChart {
     this.legend = root.querySelector(".legend");
     this.rangeDate = root.querySelector(".range-date");
     this.stage = root.querySelector(".chart-stage");
+    this.screenshotFrame = root.querySelector("[data-screenshot-frame]");
     this.sizeReadout = root.querySelector(".size-readout");
     this.sizeAnnouncer = root.querySelector(".resize-announcer");
     this.wideButton = root.querySelector("button[data-size-action=\"wide\"]");
@@ -1827,6 +1841,7 @@ class CanvasTimeChart {
     });
     this.resizeObserver.observe(this.root);
     this.resizeObserver.observe(this.stage);
+    this.resizeObserver.observe(this.screenshotFrame);
     this.schedule();
   }
 
@@ -1854,7 +1869,7 @@ class CanvasTimeChart {
   }
 
   updateSizeUi(announce = false) {
-    const rect = this.stage.getBoundingClientRect();
+    const rect = this.screenshotFrame.getBoundingClientRect();
     const width = Math.round(rect.width);
     const height = Math.round(rect.height);
     const wide = this.root.classList.contains("is-wide");
@@ -1864,7 +1879,7 @@ class CanvasTimeChart {
       this.wideButton.setAttribute("aria-pressed", String(wide));
       this.wideButton.textContent = wide ? "半宽" : "宽屏";
     }
-    if (announce && this.sizeAnnouncer) this.sizeAnnouncer.textContent = `${layout}，图表宽${width}像素，高${height}像素`;
+    if (announce && this.sizeAnnouncer) this.sizeAnnouncer.textContent = `${layout}，含图例的图形宽${width}像素，高${height}像素`;
   }
 
   setCardSize(wide, height, { persist = false, announce = false } = {}) {
