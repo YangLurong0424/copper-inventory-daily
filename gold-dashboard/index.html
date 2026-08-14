@@ -531,12 +531,13 @@ a { color: inherit; }
 
 .chart-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(12, minmax(0, 1fr));
   gap: 16px;
   align-items: start;
 }
 
 .chart-card {
+  grid-column: span 6;
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--line);
@@ -544,6 +545,8 @@ a { color: inherit; }
   background: var(--paper);
   box-shadow: var(--shadow);
 }
+
+.chart-card.is-wide { grid-column: 1 / -1; }
 
 .card-head {
   display: flex;
@@ -672,9 +675,75 @@ a { color: inherit; }
 .legend-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .legend-axis { color: #8a938f; font-size: 8px; }
 
+.chart-size-tools {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 18px 8px;
+}
+
+.chart-size-label {
+  display: flex;
+  min-width: 0;
+  margin-right: auto;
+  flex-direction: column;
+  color: var(--muted);
+}
+
+.chart-size-label b { color: #52605a; font-size: 9px; }
+.chart-size-label small { font-size: 8px; font-variant-numeric: tabular-nums; }
+
+.size-tool,
+.chart-resizer {
+  min-width: 38px;
+  min-height: 32px;
+  padding: 0 9px;
+  border: 1px solid #ddd8ca;
+  border-radius: 7px;
+  background: #fff;
+  color: #5b6762;
+  font-size: 9px;
+  font-weight: 750;
+}
+
+.size-tool:hover,
+.size-tool:focus-visible,
+.chart-resizer:hover,
+.chart-resizer:focus-visible,
+.chart-resizer.active {
+  border-color: #c19b42;
+  background: #faf3df;
+  color: #6b4b13;
+  outline: none;
+}
+
+.size-tool[aria-pressed="true"] { background: #ece7da; color: #6b4b13; }
+
+.chart-resizer {
+  position: relative;
+  width: 38px;
+  padding: 0;
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
+.chart-resizer span {
+  position: absolute;
+  right: 9px;
+  bottom: 7px;
+  width: 14px;
+  height: 14px;
+  background: repeating-linear-gradient(135deg, transparent 0 3px, #9c7a2f 3px 4.5px);
+  clip-path: polygon(100% 0, 100% 100%, 0 100%);
+}
+
+body.chart-resizing { cursor: nwse-resize; user-select: none; }
+
 .chart-stage {
   position: relative;
-  height: 292px;
+  height: clamp(240px, var(--chart-height, 292px), 720px);
   margin: 0 10px;
   border-top: 1px solid #efede7;
   background: #fff;
@@ -685,8 +754,10 @@ a { color: inherit; }
   display: block;
   width: 100%;
   height: 100%;
-  touch-action: none;
 }
+
+.chart-stage canvas { touch-action: pan-y; }
+.navigator canvas { touch-action: none; }
 
 .chart-stage canvas:focus-visible,
 .navigator canvas:focus-visible { outline: 2px solid #b68528; outline-offset: -2px; }
@@ -966,6 +1037,9 @@ a { color: inherit; }
 
 @media (max-width: 1040px) {
   .chart-grid { grid-template-columns: 1fr; }
+  .chart-card,
+  .chart-card.is-wide { grid-column: 1 / -1; }
+  .size-wide { display: none; }
   .report-map-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .source-list { grid-template-columns: repeat(2, minmax(0,1fr)); }
 }
@@ -989,7 +1063,11 @@ a { color: inherit; }
   .source-inner { align-items: flex-start; padding: 10px 0; }
   .source-state { display: none; }
   .source-actions { width: 100%; justify-content: space-between; }
-  .chart-stage { height: 260px; }
+  .chart-stage { height: clamp(240px, var(--chart-height, 260px), 560px); }
+  .chart-size-tools { padding-inline: 12px; }
+  .size-tool,
+  .chart-resizer { min-width: 44px; min-height: 44px; }
+  .chart-resizer { width: 44px; }
   .navigator { height: 64px; }
   .preset-row {
     justify-content: flex-start;
@@ -1017,6 +1095,7 @@ a { color: inherit; }
   .card-head { padding-inline: 14px; }
   .legend { padding-inline: 14px; }
   .chart-stage, .navigator { margin-inline: 4px; }
+  .chart-size-tools { padding-inline: 10px; }
   .range-help { display: none; }
   .indicator-name { align-items: flex-start; flex-direction: column; gap: 2px; }
   .indicator-name small { max-width: 100%; white-space: normal; }
@@ -1027,13 +1106,16 @@ a { color: inherit; }
   .toolbar,
   .report-toggle,
   .pagination,
+  .chart-size-tools,
   .preset-row,
   .loading-overlay,
   .toast { display: none !important; }
   body { background: #fff; }
   .shell { width: 100%; padding: 10px; }
   .chart-grid { grid-template-columns: 1fr; }
-  .chart-card { break-inside: avoid; box-shadow: none; }
+  .chart-card,
+  .chart-card.is-wide { grid-column: 1 / -1; break-inside: avoid; box-shadow: none; }
+  .chart-stage { height: 292px !important; }
 }
 </style>
 </head>
@@ -1161,11 +1243,16 @@ const COLORS = ["#b68528", "#2d6a8c", "#b44b43", "#147d64", "#7a5ea7", "#cb7b35"
 const DAY = 86400000;
 const PRESET_DAYS = { "1M": 30, "3M": 91, "6M": 183, "1Y": 365, "3Y": 1096 };
 const PRESET_LABELS = { "1M": "1月", "3M": "3月", "6M": "6月", "1Y": "1年", "3Y": "3年", "ALL": "全部" };
+const CHART_SIZE_STORAGE_KEY = "gold-dashboard.chart-sizes.v1";
+const MIN_CHART_HEIGHT = 240;
+const MAX_CHART_HEIGHT = 720;
+const MAX_MOBILE_CHART_HEIGHT = 560;
 
 const embeddedData = JSON.parse(document.getElementById("dashboard-data").textContent);
 let dashboard = deepClone(embeddedData);
 let views = new Map();
 let toastTimer = null;
+let chartSizePreferences = loadChartSizePreferences();
 
 const state = {
   sheet: "全部",
@@ -1176,6 +1263,33 @@ const state = {
   range: "1Y",
   reportOnly: false,
 };
+
+function loadChartSizePreferences() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CHART_SIZE_STORAGE_KEY) || "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function saveChartSizePreferences() {
+  try {
+    localStorage.setItem(CHART_SIZE_STORAGE_KEY, JSON.stringify(chartSizePreferences));
+  } catch (_) {
+    // localStorage may be unavailable in hardened or file:// browser contexts.
+  }
+}
+
+function savedChartSize(chartId) {
+  const raw = chartSizePreferences[chartId];
+  if (!raw || typeof raw !== "object") return null;
+  const height = Number(raw.height);
+  return {
+    wide: raw.wide === true,
+    height: Number.isFinite(height) ? Math.max(MIN_CHART_HEIGHT, Math.min(MAX_CHART_HEIGHT, height)) : null,
+  };
+}
 
 const els = {
   heroMeta: document.getElementById("hero-meta"),
@@ -1256,7 +1370,8 @@ function formatAxisDate(timestamp, span) {
 
 function buildTimeTicks(start, end, plotWidth, ctx) {
   const span = Math.max(DAY, end - start);
-  let count = Math.max(2, Math.min(5, Math.floor(plotWidth / 90) + 1));
+  const distinctDayLimit = Math.floor(span / DAY) + 1;
+  let count = Math.max(2, Math.min(5, Math.floor(plotWidth / 90) + 1, distinctDayLimit));
   while (count >= 2) {
     const ticks = Array.from({ length: count }, (_, index) => {
       const time = start + index / (count - 1) * span;
@@ -1271,6 +1386,37 @@ function buildTimeTicks(start, end, plotWidth, ctx) {
 
 function formatRangeTimestamp(timestamp) {
   return formatDate(new Date(timestamp).toISOString().slice(0, 10));
+}
+
+function normalizeRange(start, end, fullMin, fullMax) {
+  if (![start, end, fullMin, fullMax].every(Number.isFinite) || fullMax <= fullMin) return null;
+  if (end < start) [start, end] = [end, start];
+  const total = fullMax - fullMin;
+  const minSpan = Math.min(total, DAY);
+  const span = Math.max(minSpan, Math.min(total, end - start));
+  let nextStart = (start + end - span) / 2;
+  let nextEnd = nextStart + span;
+  if (nextStart < fullMin) {
+    nextStart = fullMin;
+    nextEnd = fullMin + span;
+  }
+  if (nextEnd > fullMax) {
+    nextEnd = fullMax;
+    nextStart = fullMax - span;
+  }
+  return { start: nextStart, end: nextEnd };
+}
+
+function clampChartHeight(height, mobile = false) {
+  const maxHeight = mobile ? MAX_MOBILE_CHART_HEIGHT : MAX_CHART_HEIGHT;
+  return Math.round(Math.max(MIN_CHART_HEIGHT, Math.min(maxHeight, height)));
+}
+
+function resizedWideMode(startWide, horizontalDelta, singleColumn = false) {
+  if (singleColumn) return Boolean(startWide);
+  if (horizontalDelta >= 72) return true;
+  if (horizontalDelta <= -72) return false;
+  return Boolean(startWide);
 }
 
 function localIsoDate() {
@@ -1587,6 +1733,13 @@ function cardHtml(chart) {
     ${quality.level !== "ok" ? `<div class="quality-banner ${escapeHtml(quality.level)}"><strong>数据质量：</strong>${escapeHtml(quality.message)}</div>` : ""}
     ${reportAnnotationHtml(chart)}
     <div class="legend" aria-label="图例"></div>
+    <div class="chart-size-tools" aria-label="截图尺寸">
+      <span class="chart-size-label"><b>截图尺寸</b><small class="size-readout"></small></span>
+      <button class="size-tool size-wide" type="button" data-size-action="wide" aria-pressed="false" title="在半栏和整栏之间切换">宽屏</button>
+      <button class="size-tool" type="button" data-size-action="reset" title="恢复默认图表尺寸">重置</button>
+      <button class="chart-resizer" type="button" aria-label="调整图表大小：左右拖动切换半宽或整宽，上下拖动调整高度；方向键也可调整" title="拖动调整宽高；方向键调整，Home重置"><span aria-hidden="true"></span></button>
+      <span class="resize-announcer sr-only" aria-live="polite"></span>
+    </div>
     <div class="chart-stage">
       <canvas class="main-chart" tabindex="0" role="img" aria-label="${escapeHtml(chart.title)} 时间序列图；滚轮缩放，拖动平移"></canvas>
       <div class="chart-tooltip" aria-hidden="true"></div>
@@ -1643,6 +1796,11 @@ class CanvasTimeChart {
     this.tooltip = root.querySelector(".chart-tooltip");
     this.legend = root.querySelector(".legend");
     this.rangeDate = root.querySelector(".range-date");
+    this.stage = root.querySelector(".chart-stage");
+    this.sizeReadout = root.querySelector(".size-readout");
+    this.sizeAnnouncer = root.querySelector(".resize-announcer");
+    this.wideButton = root.querySelector("button[data-size-action=\"wide\"]");
+    this.resizeHandle = root.querySelector(".chart-resizer");
     this.visible = chart.series.map((series) => series.dataQuality?.level !== "error");
     this.xy = chart.series.map((series) => series.points.map((p) => [Date.parse(p[0]), p[1]]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1])));
     const allTimes = this.xy.flatMap((series) => series.map((p) => p[0]));
@@ -1653,17 +1811,149 @@ class CanvasTimeChart {
     this.end = this.fullMax;
     this.drag = null;
     this.raf = 0;
+    this.sizeDrag = null;
+    this.pendingSize = null;
+    this.sizeRaf = 0;
+    this.applyStoredSize();
     this.bind();
     this.buildLegend();
     this.applyPreset(preset, false);
-    this.resizeObserver = new ResizeObserver(() => this.schedule());
+    this.resizeObserver = new ResizeObserver(() => {
+      this.schedule();
+      this.updateSizeUi();
+    });
     this.resizeObserver.observe(this.root);
+    this.resizeObserver.observe(this.stage);
     this.schedule();
   }
 
   destroy() {
     if (this.resizeObserver) this.resizeObserver.disconnect();
     if (this.raf) cancelAnimationFrame(this.raf);
+    if (this.sizeRaf) cancelAnimationFrame(this.sizeRaf);
+    document.body.classList.remove("chart-resizing");
+  }
+
+  applyStoredSize() {
+    const saved = savedChartSize(this.chart.id);
+    this.root.classList.toggle("is-wide", Boolean(saved?.wide));
+    if (saved?.height) this.root.style.setProperty("--chart-height", `${saved.height}px`);
+    else this.root.style.removeProperty("--chart-height");
+    requestAnimationFrame(() => this.updateSizeUi());
+  }
+
+  isSingleColumn() {
+    return window.matchMedia("(max-width: 1040px)").matches;
+  }
+
+  currentChartHeight() {
+    return Math.round(this.stage.getBoundingClientRect().height || 292);
+  }
+
+  updateSizeUi(announce = false) {
+    const rect = this.stage.getBoundingClientRect();
+    const width = Math.round(rect.width);
+    const height = Math.round(rect.height);
+    const wide = this.root.classList.contains("is-wide");
+    const layout = this.isSingleColumn() ? "屏幕宽" : wide ? "整栏" : "半栏";
+    if (this.sizeReadout) this.sizeReadout.textContent = `${layout} · ${width}×${height}px`;
+    if (this.wideButton) {
+      this.wideButton.setAttribute("aria-pressed", String(wide));
+      this.wideButton.textContent = wide ? "半宽" : "宽屏";
+    }
+    if (announce && this.sizeAnnouncer) this.sizeAnnouncer.textContent = `${layout}，图表宽${width}像素，高${height}像素`;
+  }
+
+  setCardSize(wide, height, { persist = false, announce = false } = {}) {
+    const nextHeight = clampChartHeight(height, window.matchMedia("(max-width: 760px)").matches);
+    this.root.classList.toggle("is-wide", Boolean(wide));
+    this.root.style.setProperty("--chart-height", `${nextHeight}px`);
+    if (persist) {
+      chartSizePreferences[this.chart.id] = { wide: Boolean(wide), height: nextHeight };
+      saveChartSizePreferences();
+    }
+    this.schedule();
+    requestAnimationFrame(() => this.updateSizeUi(announce));
+  }
+
+  resetCardSize(announce = true) {
+    delete chartSizePreferences[this.chart.id];
+    saveChartSizePreferences();
+    this.root.classList.remove("is-wide");
+    this.root.style.removeProperty("--chart-height");
+    this.schedule();
+    requestAnimationFrame(() => this.updateSizeUi(announce));
+  }
+
+  startSizeResize(event) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.resizeHandle.setPointerCapture(event.pointerId);
+    this.sizeDrag = {
+      x: event.clientX,
+      y: event.clientY,
+      height: this.currentChartHeight(),
+      wide: this.root.classList.contains("is-wide"),
+    };
+    this.resizeHandle.classList.add("active");
+    document.body.classList.add("chart-resizing");
+  }
+
+  moveSizeResize(event) {
+    if (!this.sizeDrag) return;
+    event.preventDefault();
+    const dx = event.clientX - this.sizeDrag.x;
+    const dy = event.clientY - this.sizeDrag.y;
+    const wide = resizedWideMode(this.sizeDrag.wide, dx, this.isSingleColumn());
+    this.pendingSize = { wide, height: this.sizeDrag.height + dy };
+    if (!this.sizeRaf) this.sizeRaf = requestAnimationFrame(() => this.flushSizeResize());
+  }
+
+  flushSizeResize() {
+    this.sizeRaf = 0;
+    if (!this.pendingSize) return;
+    const next = this.pendingSize;
+    this.pendingSize = null;
+    this.setCardSize(next.wide, next.height);
+  }
+
+  endSizeResize() {
+    if (!this.sizeDrag) return;
+    if (this.sizeRaf) {
+      cancelAnimationFrame(this.sizeRaf);
+      this.sizeRaf = 0;
+    }
+    this.flushSizeResize();
+    const wide = this.root.classList.contains("is-wide");
+    const height = this.currentChartHeight();
+    chartSizePreferences[this.chart.id] = { wide, height };
+    saveChartSizePreferences();
+    this.sizeDrag = null;
+    this.resizeHandle.classList.remove("active");
+    document.body.classList.remove("chart-resizing");
+    this.updateSizeUi(true);
+  }
+
+  sizeKey(event) {
+    const wide = this.root.classList.contains("is-wide");
+    const height = this.currentChartHeight();
+    const step = event.shiftKey ? 100 : 40;
+    if (event.key === "Home") {
+      event.preventDefault();
+      this.resetCardSize();
+    } else if (event.key === "ArrowLeft" && !this.isSingleColumn()) {
+      event.preventDefault();
+      this.setCardSize(false, height, { persist: true, announce: true });
+    } else if (event.key === "ArrowRight" && !this.isSingleColumn()) {
+      event.preventDefault();
+      this.setCardSize(true, height, { persist: true, announce: true });
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      this.setCardSize(wide, height - step, { persist: true, announce: true });
+    } else if (event.key === "ArrowDown") {
+      event.preventDefault();
+      this.setCardSize(wide, height + step, { persist: true, announce: true });
+    }
   }
 
   buildLegend() {
@@ -1681,6 +1971,21 @@ class CanvasTimeChart {
   }
 
   bind() {
+    this.root.querySelector(".chart-size-tools").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-size-action]");
+      if (!button) return;
+      if (button.dataset.sizeAction === "wide") {
+        this.setCardSize(!this.root.classList.contains("is-wide"), this.currentChartHeight(), { persist: true, announce: true });
+      } else if (button.dataset.sizeAction === "reset") {
+        this.resetCardSize();
+      }
+    });
+    this.resizeHandle.addEventListener("pointerdown", (event) => this.startSizeResize(event));
+    this.resizeHandle.addEventListener("pointermove", (event) => this.moveSizeResize(event));
+    this.resizeHandle.addEventListener("pointerup", () => this.endSizeResize());
+    this.resizeHandle.addEventListener("pointercancel", () => this.endSizeResize());
+    this.resizeHandle.addEventListener("keydown", (event) => this.sizeKey(event));
+
     this.root.querySelector(".preset-row").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-preset]");
       if (button) this.applyPreset(button.dataset.preset);
@@ -1785,14 +2090,10 @@ class CanvasTimeChart {
   }
 
   setRange(start, end, preservePreset = false) {
-    const total = this.fullMax - this.fullMin;
-    const minSpan = Math.min(total, DAY);
-    let span = Math.max(minSpan, Math.min(total, end - start));
-    if (start < this.fullMin) { start = this.fullMin; end = start + span; }
-    if (end > this.fullMax) { end = this.fullMax; start = end - span; }
-    if (end - start < minSpan) end = Math.min(this.fullMax, start + minSpan);
-    this.start = start;
-    this.end = end;
+    const normalized = normalizeRange(start, end, this.fullMin, this.fullMax);
+    if (!normalized) return;
+    this.start = normalized.start;
+    this.end = normalized.end;
     if (!preservePreset) {
       this.root.querySelectorAll("button[data-preset]").forEach((button) => button.classList.remove("active"));
     }
