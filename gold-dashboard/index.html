@@ -1532,6 +1532,10 @@ function labelFor(series) {
   return series.displayName || series.name || "未命名指标";
 }
 
+function legendLabelFor(series) {
+  return series.rawName || series.name || series.displayName || "未命名指标";
+}
+
 function normalizeSemanticName(value) {
   return String(value || "")
     .trim()
@@ -1745,7 +1749,7 @@ function buildChartSvg({ chart, xy, visible, start, end, stageHeight = 500, meas
       const axis = series.axis === "right" ? `右轴${series.axisInverted ? "·倒置" : ""}` : "左轴";
       const axisWidth = measure(axis, 16, 500);
       const labelWidth = Math.max(150, legendColumnWidth - 42 - axisWidth - 18);
-      const lines = wrapMeasuredText(labelFor(series), labelWidth, (text) => measure(text, 20, 600), 3);
+      const lines = wrapMeasuredText(legendLabelFor(series), labelWidth, (text) => measure(text, 20, 600), 3);
       return { index, axis, axisWidth, lines, height: Math.max(30, lines.length * 27) };
     });
     legendRows.push({ items: row, height: Math.max(...row.map((item) => item.height), 30) + 10 });
@@ -1947,7 +1951,7 @@ function buildNativePptChart({ chart, xy, visible, start, end, pptx }) {
     const group = groups.get(key);
     group.indices.push(index);
     group.data.push({
-      name: labelFor(series),
+      name: legendLabelFor(series),
       labels: points.map((point) => excelSerialFromTimestamp(point[0])),
       values: points.map((point) => point[1]),
     });
@@ -2674,7 +2678,7 @@ class CanvasTimeChart {
   }
 
   buildLegend() {
-    this.legend.innerHTML = this.chart.series.map((series, i) => `<button type="button" class="legend-button${this.visible[i] ? "" : " off"}" data-index="${i}" title="${series.dataQuality?.level === "error" ? "数据异常，默认隐藏；点击仅作审计查看" : "点击显示或隐藏"}"><span class="legend-dot" style="background:${COLORS[i % COLORS.length]}"></span><span class="legend-name">${escapeHtml(labelFor(series))}</span><span class="legend-axis">${series.axis === "right" ? `右轴${series.axisInverted ? "·倒置" : ""}` : "左轴"}</span></button>`).join("");
+    this.legend.innerHTML = this.chart.series.map((series, i) => `<button type="button" class="legend-button${this.visible[i] ? "" : " off"}" data-index="${i}" title="${series.dataQuality?.level === "error" ? "数据异常，默认隐藏；点击仅作审计查看" : "点击显示或隐藏"}"><span class="legend-dot" style="background:${COLORS[i % COLORS.length]}"></span><span class="legend-name">${escapeHtml(legendLabelFor(series))}</span><span class="legend-axis">${series.axis === "right" ? `右轴${series.axisInverted ? "·倒置" : ""}` : "左轴"}</span></button>`).join("");
     this.legend.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-index]");
       if (!button) return;
@@ -3031,7 +3035,7 @@ class CanvasTimeChart {
       const point = this.nearestPoint(this.xy[index], t);
       if (!point || point[0] < this.start || point[0] > this.end) return;
       if (!date) date = new Date(point[0]).toISOString().slice(0, 10);
-      rows.push(`<div class="tooltip-row"><span class="tooltip-swatch" style="background:${COLORS[index % COLORS.length]}"></span><span class="tooltip-label">${escapeHtml(labelFor(series))}</span><span class="tooltip-value">${escapeHtml(formatValue(series, point[1]))}</span></div>`);
+      rows.push(`<div class="tooltip-row"><span class="tooltip-swatch" style="background:${COLORS[index % COLORS.length]}"></span><span class="tooltip-label">${escapeHtml(legendLabelFor(series))}</span><span class="tooltip-value">${escapeHtml(formatValue(series, point[1]))}</span></div>`);
     });
     if (!rows.length) return;
     this.tooltip.innerHTML = `<div class="tooltip-date">${escapeHtml(formatDate(date))}</div>${rows.join("")}`;
