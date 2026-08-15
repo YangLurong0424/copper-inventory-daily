@@ -680,18 +680,6 @@ a { color: inherit; }
 .legend-name { min-width: 0; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; white-space: normal; }
 .legend-axis { padding-top: 1px; flex: 0 0 auto; color: #77827d; font-size: 10px; white-space: nowrap; }
 
-.axis-clip-note {
-  padding: 6px 14px;
-  border-bottom: 1px solid #ecd7c7;
-  background: #fff6ef;
-  color: #9a4b2e;
-  font-size: 10px;
-  font-weight: 650;
-  line-height: 1.45;
-}
-
-.axis-clip-note[hidden] { display: none; }
-
 .chart-size-tools {
   display: flex;
   flex-wrap: wrap;
@@ -2009,11 +1997,6 @@ function buildChartSvg({ chart, xy, visible, start, end, axisSettings = excelAxi
   const x = (time) => plot.left + (time - start) / (end - start) * plot.width;
   const yLeft = (value) => axisY(value, leftScale || rightScale, leftInverted, plot);
   const yRight = (value) => axisY(value, rightScale || leftScale, rightInverted, plot);
-  const clippedCount = visibleIndices.reduce((sum, index) => {
-    const scale = chart.series[index].axis === "right" ? rightScale : leftScale;
-    if (!scale) return sum;
-    return sum + xy[index].filter((point) => point[0] >= start && point[0] <= end && (point[1] < scale.min || point[1] > scale.max)).length;
-  }, 0);
   const parts = [];
   const pushText = (text, xPos, yPos, attrs = "") => parts.push(`<text x="${svgNumber(xPos)}" y="${svgNumber(yPos)}" ${attrs}>${escapeHtml(text)}</text>`);
   const clipId = `plot-${String(chart.id || "chart").replace(/[^a-zA-Z0-9_-]/g, "-")}`;
@@ -2092,8 +2075,7 @@ function buildChartSvg({ chart, xy, visible, start, end, axisSettings = excelAxi
   }
   const invertedSides = [leftInverted ? "左轴" : "", rightInverted ? "右轴" : ""].filter(Boolean).join("、");
   const axisNote = invertedSides ? ` · ${invertedSides}为倒置刻度` : "";
-  const clippedNote = clippedCount ? ` · ${clippedCount}个点超出固定纵轴` : "";
-  pushText(`当前区间 ${formatRangeTimestamp(start)} — ${formatRangeTimestamp(end)}${axisNote}${clippedNote}`, padX, footerY, `font-family="${fontFamily}" font-size="16" fill="${clippedCount ? "#9a4b2e" : "#6f7975"}"`);
+  pushText(`当前区间 ${formatRangeTimestamp(start)} — ${formatRangeTimestamp(end)}${axisNote}`, padX, footerY, `font-family="${fontFamily}" font-size="16" fill="#6f7975"`);
   pushText("黄金驱动因子图谱", width - padX, footerY, `text-anchor="end" font-family="${fontFamily}" font-size="16" font-weight="600" fill="#a57a24"`);
   parts.push(`</svg>`);
   return { svg: parts.join(""), width, height, visibleIndices };
@@ -2673,7 +2655,6 @@ function cardHtml(chart) {
     ${axisSettingsPanelHtml(chart)}
     <div class="chart-visual" data-screenshot-frame="true">
       <div class="legend" aria-label="图例"></div>
-      <div class="axis-clip-note" hidden></div>
       <div class="chart-stage">
         <canvas class="main-chart" tabindex="0" role="img" aria-label="${escapeHtml(chart.title)} 时间序列图；滚轮缩放，拖动平移"></canvas>
         <div class="chart-tooltip" aria-hidden="true"></div>
@@ -2740,7 +2721,6 @@ class CanvasTimeChart {
     this.axisPanel = root.querySelector(".axis-settings");
     this.axisForm = root.querySelector(".axis-settings-form");
     this.axisStatus = root.querySelector(".axis-settings-status");
-    this.axisClipNote = root.querySelector(".axis-clip-note");
     this.axisMode = root.querySelector(".axis-mode");
     this.axisToggle = root.querySelector("button[data-axis-action=\"toggle\"]");
     this.axisPreference = savedChartAxis(chart);
@@ -2867,14 +2847,12 @@ class CanvasTimeChart {
     if (!this.axisStatus) return;
     const parts = [];
     const warnings = [];
-    let clippedTotal = 0;
     for (const side of ["left", "right"]) {
       const indices = this.axisIndices(side);
       if (!indices.length) continue;
       const scale = this.axisScale(side);
       const sample = this.chart.series[indices[0]];
       const clipped = indices.reduce((sum, index) => sum + this.visiblePoints(index).filter((point) => point[1] < scale.min || point[1] > scale.max).length, 0);
-      clippedTotal += clipped;
       parts.push(`${side === "left" ? "左" : "右"}轴 ${formatAxisValue(this.chart, side, sample, scale.min)}—${formatAxisValue(this.chart, side, sample, scale.max)}，主刻度 ${formatAxisValue(this.chart, side, sample, scale.unit)}`);
       if (axisDisplaySpec(this.chart, side).mixedUnits) warnings.push(`${side === "left" ? "左" : "右"}轴的序列原始单位不一致，刻度按原值统一显示`);
       if (scale.error) warnings.push(`${side === "left" ? "左" : "右"}轴：${scale.error}`);
@@ -2883,10 +2861,6 @@ class CanvasTimeChart {
     const mode = this.axisPreference ? (axisSettingsAreAuto(this.axisPreference) ? "全部自动" : "自定义") : "Excel原轴";
     this.axisStatus.textContent = `${mode}｜${parts.join("；")}${warnings.length ? `。提示：${warnings.join("；")}。` : "。"}`;
     this.axisStatus.classList.toggle("warn", warnings.length > 0);
-    if (this.axisClipNote) {
-      this.axisClipNote.hidden = clippedTotal === 0;
-      this.axisClipNote.textContent = clippedTotal ? `纵轴提示：当前区间有 ${clippedTotal} 个点超出固定显示范围；可在“纵轴设置”中切换“全部自动”查看。` : "";
-    }
   }
 
   isSingleColumn() {
