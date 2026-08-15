@@ -1041,6 +1041,34 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.error { background: #7c302c; }
 
+.ppt-help {
+  width: min(620px, calc(100vw - 28px));
+  max-height: calc(100vh - 28px);
+  overflow: auto;
+  padding: 0;
+  border: 1px solid #d8cba8;
+  border-radius: 18px;
+  background: #fffdf8;
+  color: #26352f;
+  box-shadow: 0 24px 80px rgba(24,34,30,.28);
+}
+
+.ppt-help::backdrop { background: rgba(20,30,26,.52); backdrop-filter: blur(4px); }
+.ppt-help-card { position: relative; margin: 0; padding: 28px; }
+.ppt-help-kicker { color: #946d20; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+.ppt-help h2 { margin: 5px 42px 10px 0; font: 650 24px/1.25 Georgia, "Noto Serif SC", serif; }
+.ppt-help-lead { margin: 0 0 16px; color: #55615c; font-size: 13px; line-height: 1.65; }
+.ppt-help ol { margin: 0; padding-left: 24px; }
+.ppt-help li { margin: 9px 0; padding-left: 4px; font-size: 13px; line-height: 1.65; }
+.ppt-help kbd { display: inline-block; min-width: 23px; padding: 1px 5px; border: 1px solid #cdc6b5; border-bottom-width: 2px; border-radius: 5px; background: #f7f4ec; font: 700 11px/1.45 ui-monospace, Consolas, monospace; text-align: center; }
+.ppt-help-note { margin: 16px 0; padding: 11px 12px; border-left: 3px solid #bf963d; border-radius: 0 8px 8px 0; background: #f8f2e4; color: #5d625e; font-size: 11px; line-height: 1.6; }
+.ppt-help-close { position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; padding: 0; border: 0; border-radius: 50%; background: #f1eee5; color: #69736e; font-size: 24px; line-height: 1; }
+.ppt-help-ok { width: 100%; min-height: 44px; padding: 10px 14px; border: 1px solid #a87c24; border-radius: 9px; background: #a87c24; color: #fff; font-size: 13px; font-weight: 800; }
+.ppt-help-close:hover,
+.ppt-help-close:focus-visible,
+.ppt-help-ok:hover,
+.ppt-help-ok:focus-visible { filter: brightness(.96); outline: 3px solid rgba(184,137,45,.22); }
+
 .loading-overlay {
   position: fixed;
   z-index: 90;
@@ -1136,6 +1164,7 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
   .preset-row,
   .loading-overlay,
   .toast { display: none !important; }
+  .ppt-help { display: none !important; }
   body { background: #fff; }
   .shell { width: 100%; padding: 10px; }
   .chart-grid { grid-template-columns: 1fr; }
@@ -1238,6 +1267,22 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
   </main>
 
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <dialog class="ppt-help" id="ppt-help" aria-labelledby="ppt-help-title">
+    <form method="dialog" class="ppt-help-card">
+      <button class="ppt-help-close" type="submit" aria-label="关闭">×</button>
+      <span class="ppt-help-kicker">电脑端 PowerPoint</span>
+      <h2 id="ppt-help-title">原生可编辑图表已经下载</h2>
+      <p class="ppt-help-lead">浏览器下载的 Office 文件会被 Windows 放进“受保护视图”。文件里的图表没有锁，但必须先解除这层只读保护。</p>
+      <ol>
+        <li><b>用桌面版 PowerPoint 打开</b>刚下载的文件，不要停留在浏览器预览。</li>
+        <li>在顶部黄色提示栏点 <b>启用编辑</b>。</li>
+        <li>在幻灯片空白处点一下，按 <kbd>Ctrl</kbd>+<kbd>A</kbd> 选中整张原生图表，再按 <kbd>Ctrl</kbd>+<kbd>C</kbd>。</li>
+        <li>切到你的演示文稿按 <kbd>Ctrl</kbd>+<kbd>V</kbd>；拖动图表外框即可改尺寸，图中文字字号保持不变。</li>
+      </ol>
+      <p class="ppt-help-note">普通网页只能直接复制 PNG/SVG 图片，不能写入 PowerPoint 私有的原生图表剪贴板格式；要保留可编辑数据和固定字号，目前需要先打开这个一页 PPT。</p>
+      <button class="ppt-help-ok" type="submit">知道了，去 PowerPoint 启用编辑</button>
+    </form>
+  </dialog>
   <div class="loading-overlay" id="loading-overlay" aria-hidden="true">
     <div class="loading-card">
       <div class="spinner" aria-hidden="true"></div>
@@ -1465,6 +1510,7 @@ const els = {
   methodNote: document.getElementById("method-note"),
   sourceList: document.getElementById("source-list"),
   toast: document.getElementById("toast"),
+  pptHelp: document.getElementById("ppt-help"),
   loading: document.getElementById("loading-overlay"),
   loadingText: document.getElementById("loading-text"),
 };
@@ -2275,9 +2321,9 @@ function cardHtml(chart) {
     ${quality.level !== "ok" ? `<div class="quality-banner ${escapeHtml(quality.level)}"><strong>数据质量：</strong>${escapeHtml(quality.message)}</div>` : ""}
     ${reportAnnotationHtml(chart)}
     <div class="chart-size-tools" aria-label="截图尺寸">
-      <span class="chart-size-label"><b>截图框（含图例） · 可拖动</b><small><span class="size-readout"></span> · 本图PPT改尺寸时字号保持不变</small></span>
-      <button class="size-tool export-tool export-pptx" type="button" data-export-action="pptx" title="下载仅含当前图的原生PowerPoint图表；图表数据、轴和系列可编辑">本图PPT</button>
-      <button class="size-tool export-tool export-copy" type="button" data-export-action="copy" title="复制高清图片；改变图片尺寸时文字会随图片一起缩放">复制图片</button>
+      <span class="chart-size-label"><b>截图框（含图例） · 可拖动</b><small><span class="size-readout"></span> · 原生PPT需先“启用编辑”，改图框时字号不变</small></span>
+      <button class="size-tool export-tool export-pptx" type="button" data-export-action="pptx" title="下载仅含当前图的原生PowerPoint图表；打开后先点黄色栏“启用编辑”">下载可编辑PPT</button>
+      <button class="size-tool export-tool export-copy" type="button" data-export-action="copy" title="直接复制高清图片，不是可编辑的PowerPoint图表；改变图片尺寸时文字会随图片一起缩放">复制高清图</button>
       <button class="size-tool export-tool export-svg" type="button" data-export-action="svg" title="下载含标题、图例、坐标和当前时间区间的SVG矢量图片；改变图片尺寸时文字会随整体缩放">SVG矢量</button>
       <button class="size-tool size-wide" type="button" data-size-action="wide" aria-pressed="false" title="在半栏和整栏之间切换">宽屏</button>
       <button class="size-tool" type="button" data-size-action="reset" title="恢复默认图表尺寸">重置</button>
@@ -2478,7 +2524,7 @@ class CanvasTimeChart {
     }
     slide.addNotes(`来源：${this.chart.sheet} · ${this.chart.shapeName || this.chart.id}\n时间区间：${formatDate(new Date(this.start).toISOString())} 至 ${formatDate(new Date(this.end).toISOString())}`);
     await pptx.writeFile({ fileName: this.exportFilename("pptx"), compression: true });
-    showToast("已下载原生PowerPoint图表：打开后可编辑数据、坐标轴和系列；调整图表尺寸时字号保持不变。", false);
+    showPptInstructions();
   }
 
   async copyForPowerPoint() {
@@ -3002,6 +3048,14 @@ function showToast(message, error = false) {
   els.toast.classList.toggle("error", error);
   els.toast.classList.add("show");
   toastTimer = setTimeout(() => els.toast.classList.remove("show"), 4200);
+}
+
+function showPptInstructions() {
+  if (els.pptHelp && typeof els.pptHelp.showModal === "function") {
+    if (!els.pptHelp.open) els.pptHelp.showModal();
+    return;
+  }
+  showToast("PPT已下载：请用桌面PowerPoint打开，先点顶部黄色栏“启用编辑”，再按Ctrl+A、Ctrl+C复制原生图表。", false);
 }
 
 function setLoading(show, message = "正在读取工作簿…") {
