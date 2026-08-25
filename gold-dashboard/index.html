@@ -1283,8 +1283,8 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
   .toolbar-row { grid-template-columns: 1fr; }
   .global-range { overflow-x: auto; justify-content: flex-start; }
   .source-inner { align-items: flex-start; padding: 10px 0; }
-  .source-state { display: none; }
-  .source-actions { width: 100%; justify-content: space-between; }
+  .source-state strong,
+  .source-state span { overflow: visible; text-overflow: clip; white-space: normal; }
   .chart-stage { height: clamp(240px, var(--chart-height, 260px), 560px); }
   .chart-size-tools { padding-inline: 12px; }
   .chart-size-label { flex: 1 0 100%; }
@@ -1369,15 +1369,8 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
   <div class="source-bar">
     <div class="source-inner shell">
       <div class="source-state">
-        <strong id="source-name">正在载入内置快照…</strong>
+        <strong id="source-name">正在读取最新发布数据…</strong>
         <span id="source-detail"></span>
-      </div>
-      <div class="source-actions">
-        <label class="file-button primary" title="选择同结构的新版Excel；文件只在本机浏览器解析">
-          载入新版 Excel
-          <input id="excel-input" type="file" accept=".xlsx,.xlsm,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
-        </label>
-        <button class="button" id="reset-data" type="button" disabled>恢复内置快照</button>
       </div>
     </div>
   </div>
@@ -1387,7 +1380,7 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
 
     <div class="notice">
       <span class="notice-icon" aria-hidden="true">i</span>
-      <div><strong>自动更新：</strong>本机在工作日 17:15 先刷新 Wind 数据，再执行 Excel 全量公式重算；只有日期、公式错误和 93 张核心图等质量门禁全部通过后才发布，失败时线上保留上一版。也可点击“载入新版 Excel”临时查看其他同结构文件；浏览器只读取文件，不会上传或重算。</div>
+      <div><strong>自动更新：</strong>本机在工作日 17:15 先刷新 Wind 数据，再执行 Excel 全量公式重算；只有日期、公式错误和 93 张核心图等质量门禁全部通过后才发布，失败时线上保留上一版。页面无需手动载入文件。</div>
     </div>
 
     <details class="signal-board" id="signal-board" open>
@@ -1787,8 +1780,6 @@ const els = {
   prev: document.getElementById("prev-page"),
   next: document.getElementById("next-page"),
   pageState: document.getElementById("page-state"),
-  fileInput: document.getElementById("excel-input"),
-  reset: document.getElementById("reset-data"),
   sourceName: document.getElementById("source-name"),
   sourceDetail: document.getElementById("source-detail"),
   methodNote: document.getElementById("method-note"),
@@ -2922,7 +2913,7 @@ function renderChrome() {
     `${meta.seriesCount} 条序列`,
     `${meta.glossaryUniqueCount || "—"} 个指标释义`,
     `${formatDate(meta.dateMin)} — ${formatDate(meta.dateMax)}`,
-    "手动 Excel 重载",
+    "工作日自动刷新",
   ].map((x) => `<span class="meta-pill">${escapeHtml(x)}</span>`).join("");
 
   const broken = dashboard.charts.reduce((sum, chart) => sum + chart.series.filter((s) => [s.name, s.nameFormula, s.categoryFormula, s.valueFormula].some((x) => String(x || "").includes("#REF!"))).length, 0);
@@ -2945,7 +2936,7 @@ function renderChrome() {
 
   els.globalRange.querySelectorAll("button").forEach((button) => button.classList.toggle("active", button.dataset.range === state.range));
   els.sourceName.textContent = meta.sourceFile;
-  els.sourceDetail.textContent = `当前页面数据截至 ${formatDate(meta.dateMax)}；载入新版Excel后仅在本机浏览器内解析，不会上传。`;
+  els.sourceDetail.textContent = `当前页面数据截至 ${formatDate(meta.dateMax)}；工作日 17:15 自动刷新 Wind、重算 Excel 并通过质量检查后发布。`;
   els.methodNote.textContent = `${meta.methodNote} ${meta.disclaimer}`;
   els.sourceList.innerHTML = dashboard.sources.map((source) => `<a class="source-link" href="${escapeHtml(source.url)}" target="_blank" rel="noreferrer"><strong>${escapeHtml(source.label)}</strong><span>${escapeHtml(source.note)}</span></a>`).join("");
   renderSignalBoard();
@@ -4462,26 +4453,6 @@ function bindControls() {
   });
   els.prev.addEventListener("click", () => { state.page--; renderPage(); window.scrollTo({ top: els.resultsTitle.getBoundingClientRect().top + window.scrollY - 78, behavior: "smooth" }); });
   els.next.addEventListener("click", () => { state.page++; renderPage(); window.scrollTo({ top: els.resultsTitle.getBoundingClientRect().top + window.scrollY - 78, behavior: "smooth" }); });
-  els.fileInput.addEventListener("change", () => loadExcel(els.fileInput.files[0]));
-  els.reset.addEventListener("click", () => {
-    dashboard = deepClone(embeddedData);
-    annotatePriorities(dashboard);
-    state.page = 1;
-    renderChrome();
-    renderPage();
-    els.reset.disabled = true;
-    showToast("已恢复页面内置的Excel快照；个人纵轴设置继续保留，可在图卡中点“恢复Excel原轴”。");
-  });
-  document.addEventListener("dragover", (event) => {
-    if ([...event.dataTransfer.types].includes("Files")) event.preventDefault();
-  });
-  document.addEventListener("drop", (event) => {
-    const file = event.dataTransfer?.files?.[0];
-    if (file && /\.xls[xm]?$/i.test(file.name)) {
-      event.preventDefault();
-      loadExcel(file);
-    }
-  });
 }
 
 function start() {
