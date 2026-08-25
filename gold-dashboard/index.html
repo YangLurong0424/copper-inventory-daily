@@ -1631,6 +1631,7 @@ const PRESET_LABELS = { "1M": "1月", "3M": "3月", "6M": "6月", "1Y": "1年", 
 const CHART_SIZE_STORAGE_KEY = "gold-dashboard.chart-sizes.v1";
 const CHART_AXIS_STORAGE_KEY = "gold-dashboard.chart-axes.v2";
 const MAX_AXIS_TICKS = 80;
+const AUTO_AXIS_PADDING = 0.05;
 const MIN_CHART_HEIGHT = 240;
 const MAX_CHART_HEIGHT = 720;
 const MAX_MOBILE_CHART_HEIGHT = 560;
@@ -1728,7 +1729,11 @@ function saveChartAxisPreferences() {
   }
 }
 
-function chartAxisSignature(chart) {
+function normalizeGrowingRangeFormula(value) {
+  return String(value || "").replace(/(\$?[A-Z]{1,3}\$?\d+):(\$?[A-Z]{1,3})\$?\d+/gi, "$1:$2*");
+}
+
+function legacyChartAxisSignature(chart) {
   return JSON.stringify([
     chart.sheet,
     chart.shapeName,
@@ -1736,10 +1741,43 @@ function chartAxisSignature(chart) {
   ]);
 }
 
-function savedChartAxis(chart) {
+function chartAxisSignature(chart) {
+  return JSON.stringify([
+    "axis-v3",
+    chart.sheet,
+    chart.shapeName,
+    chart.series.map((series) => [
+      series.rawName,
+      normalizeGrowingRangeFormula(series.nameFormula),
+      normalizeGrowingRangeFormula(series.categoryFormula),
+      normalizeGrowingRangeFormula(series.valueFormula),
+      series.axis === "right" ? "right" : "left",
+      Boolean(series.axisInverted),
+      series.valueKind || "number",
+    ]),
+    ["left", "right"].map((side) => chart.axisDefaults?.[side]?.numberFormat || ""),
+  ]);
+}
+
+function savedChartAxisRecord(chart) {
   const record = chartAxisPreferences[chart.id];
-  if (!record || typeof record !== "object" || record.signature !== chartAxisSignature(chart)) return null;
-  return sanitizeAxisSettings(record.settings);
+  if (!record || typeof record !== "object") return null;
+  const signature = chartAxisSignature(chart);
+  const legacyMatch = normalizeGrowingRangeFormula(record.signature) === normalizeGrowingRangeFormula(legacyChartAxisSignature(chart));
+  if (record.signature !== signature && !legacyMatch) return null;
+  const settings = sanitizeAxisSettings(record.settings);
+  const mode = ["auto", "excel", "custom"].includes(record.mode)
+    ? record.mode
+    : axisSettingsAreAuto(settings) ? "auto" : "custom";
+  if (record.signature !== signature || record.mode !== mode) {
+    chartAxisPreferences[chart.id] = { signature, mode, settings };
+    saveChartAxisPreferences();
+  }
+  return { mode, settings };
+}
+
+function savedChartAxis(chart) {
+  return savedChartAxisRecord(chart)?.settings || null;
 }
 
 function excelAxisSettings(chart) {
@@ -1754,6 +1792,12 @@ function excelAxisSettings(chart) {
 
 function axisSettingsAreAuto(settings) {
   return ["left", "right"].every((side) => ["min", "max", "majorUnit"].every((field) => settings?.[side]?.[field] === null || settings?.[side]?.[field] === undefined));
+}
+
+function axisModeLabel(mode, compact = false) {
+  if (mode === "excel") return compact ? "Excel" : "Excel原轴";
+  if (mode === "custom") return compact ? "自定义" : "自定义纵轴";
+  return compact ? "自动" : "自动适应";
 }
 
 const els = {
@@ -1957,15 +2001,30 @@ function axisDisplaySpec(chart, side) {
   };
 }
 
-function formatAxisValue(chart, side, series, value) {
+function axisDecimalsForUnit(unit, scaleFactor = 1) {
+  const displayedUnit = Math.abs(Number(unit) * Number(scaleFactor || 1));
+  if (!Number.isFinite(displayedUnit) || displayedUnit <= 0) return 1;
+  for (let decimals = 1; decimals <= 6; decimals += 1) {
+    const rounded = Number(displayedUnit.toFixed(decimals));
+    const tolerance = Math.max(1e-12, displayedUnit * 1e-8);
+    if (rounded > 0 && Math.abs(rounded - displayedUnit) <= tolerance) return decimals;
+  }
+  return 6;
+}
+
+function formatAxisValue(chart, side, series, value, unit = null) {
   if (!Number.isFinite(value)) return "—";
   const info = axisDisplaySpec(chart, side);
-  if (!info.hasSafeFormat && info.scaleFactor === 1 && !info.suffix) return formatValue(series || { valueKind: "number" }, value, true);
-  const scaled = value * info.scaleFactor;
+  const decimals = Number.isFinite(unit)
+    ? axisDecimalsForUnit(unit, info.scaleFactor)
+    : Math.max(1, info.decimals);
+  const scaledRaw = value * info.scaleFactor;
+  const zeroThreshold = 0.5 * 10 ** -decimals;
+  const scaled = Math.abs(scaledRaw) < zeroThreshold ? 0 : scaledRaw;
   const formatted = new Intl.NumberFormat("zh-CN", {
-    useGrouping: info.grouping,
-    minimumFractionDigits: info.decimals,
-    maximumFractionDigits: info.decimals,
+    useGrouping: info.grouping || Math.abs(scaled) >= 1000,
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
   }).format(scaled);
   return `${formatted}${info.suffix}`;
 }
@@ -2045,26 +2104,30 @@ function wrapMeasuredText(value, maxWidth, measure, maxLines = 3) {
   return lines.slice(0, maxLines);
 }
 
-function exportDomain(indices, xy, start, end) {
-  const values = indices.flatMap((index) => xy[index]
-    .filter((point) => point[0] >= start && point[0] <= end)
-    .map((point) => point[1]));
+function paddedAxisDomain(values) {
   if (!values.length) return [0, 1];
   let min = Math.min(...values);
   let max = Math.max(...values);
   if (min === max) {
-    const pad = Math.abs(min || 1) * 0.08;
+    const pad = Math.abs(min || 1) * AUTO_AXIS_PADDING;
     min -= pad;
     max += pad;
   } else {
-    const pad = (max - min) * 0.09;
+    const pad = (max - min) * AUTO_AXIS_PADDING;
     min -= pad;
     max += pad;
   }
   return [min, max];
 }
 
-function buildChartSvg({ chart, xy, visible, start, end, axisSettings = excelAxisSettings(chart), stageHeight = 500, measureText }) {
+function exportDomain(indices, xy, start, end) {
+  const values = indices.flatMap((index) => xy[index]
+    .filter((point) => point[0] >= start && point[0] <= end)
+    .map((point) => point[1]));
+  return paddedAxisDomain(values);
+}
+
+function buildChartSvg({ chart, xy, visible, start, end, axisSettings = blankAxisSettings(), stageHeight = 500, measureText }) {
   const width = 1200;
   const padX = 54;
   const fontFamily = "Microsoft YaHei, PingFang SC, Noto Sans CJK SC, Arial, sans-serif";
@@ -2108,8 +2171,9 @@ function buildChartSvg({ chart, xy, visible, start, end, axisSettings = excelAxi
   plot.height = chartBoxHeight - 18 - plot.bottom;
   const footerY = chartTop + chartBoxHeight + 28;
   const height = footerY + 34;
-  const leftIndices = visibleIndices.filter((index) => chart.series[index].axis !== "right");
-  const rightIndices = visibleIndices.filter((index) => chart.series[index].axis === "right");
+  const hasPointInRange = (index) => xy[index].some((point) => point[0] >= start && point[0] <= end);
+  const leftIndices = visibleIndices.filter((index) => chart.series[index].axis !== "right" && hasPointInRange(index));
+  const rightIndices = visibleIndices.filter((index) => chart.series[index].axis === "right" && hasPointInRange(index));
   const leftInverted = leftIndices.some((index) => chart.series[index].axisInverted);
   const rightInverted = rightIndices.some((index) => chart.series[index].axisInverted);
   const leftScale = leftIndices.length ? resolveAxisScale(exportDomain(leftIndices, xy, start, end), axisSettings.left) : null;
@@ -2148,8 +2212,8 @@ function buildChartSvg({ chart, xy, visible, start, end, axisSettings = excelAxi
     const py = axisY(value, gridScale, gridInverted, plot);
     parts.push(`<line x1="${plot.left}" y1="${svgNumber(py)}" x2="${plot.left + plot.width}" y2="${svgNumber(py)}" stroke="#e8e5dd" stroke-width="1.5"/>`);
   }
-  if (leftScale) leftScale.ticks.forEach((value) => pushText(formatAxisValue(chart, "left", chart.series[leftIndices[0]], value), plot.left - 12, axisY(value, leftScale, leftInverted, plot) + 6, `text-anchor="end" font-family="${fontFamily}" font-size="18" font-weight="500" fill="#59645f"`));
-  if (rightScale) rightScale.ticks.forEach((value) => pushText(formatAxisValue(chart, "right", chart.series[rightIndices[0]], value), plot.left + plot.width + 12, axisY(value, rightScale, rightInverted, plot) + 6, `font-family="${fontFamily}" font-size="18" font-weight="500" fill="#59645f"`));
+  if (leftScale) leftScale.ticks.forEach((value) => pushText(formatAxisValue(chart, "left", chart.series[leftIndices[0]], value, leftScale.unit), plot.left - 12, axisY(value, leftScale, leftInverted, plot) + 6, `text-anchor="end" font-family="${fontFamily}" font-size="18" font-weight="500" fill="#59645f"`));
+  if (rightScale) rightScale.ticks.forEach((value) => pushText(formatAxisValue(chart, "right", chart.series[rightIndices[0]], value, rightScale.unit), plot.left + plot.width + 12, axisY(value, rightScale, rightInverted, plot) + 6, `font-family="${fontFamily}" font-size="18" font-weight="500" fill="#59645f"`));
 
   const tickContext = { measureText: (label) => ({ width: measure(label, 18, 600) }) };
   for (const tick of buildTimeTicks(start, end, plot.width, tickContext)) {
@@ -2230,19 +2294,20 @@ function excelSerialFromTimestamp(timestamp) {
   return Math.floor(timestamp / DAY) + 25569;
 }
 
-function nativePptNumberFormat(series, chart = null, side = "left") {
+function nativePptNumberFormat(series, chart = null, side = "left", unit = null) {
   const info = chart ? axisDisplaySpec(chart, side) : null;
-  if (info?.hasSafeFormat || info?.suffix) {
-    const base = `${info.grouping ? "#,##0" : "0"}${info.decimals ? `.${"0".repeat(info.decimals)}` : ""}`;
+  const scaleFactor = info?.scaleFactor || (series?.valueKind === "percent_fraction" ? 100 : 1);
+  const decimals = Number.isFinite(unit) ? axisDecimalsForUnit(unit, scaleFactor) : 1;
+  if (info) {
+    const base = `${info.grouping ? "#,##0" : "0"}.${"0".repeat(decimals)}`;
     if (info.scaleFactor === 100 && info.suffix === "%") return `${base}%`;
     if (info.suffix === "%") return `${base}"%"`;
     return base;
   }
-  if (series?.valueKind === "percent_fraction") return "0.0%";
-  if (series?.valueKind === "percent_points") return '0.0"%"';
-  if (series?.valueKind === "fx") return "0.0000";
-  if (series?.valueKind === "quantity") return "#,##0";
-  return "#,##0.00";
+  const base = `#,##0.${"0".repeat(decimals)}`;
+  if (series?.valueKind === "percent_fraction") return `${base}%`;
+  if (series?.valueKind === "percent_points") return `${base}"%"`;
+  return base;
 }
 
 function niceNativeAxis(domain) {
@@ -2270,7 +2335,7 @@ function resolveAxisScale(autoDomain, config = {}) {
   if (!Number.isFinite(min) || !Number.isFinite(max) || min >= max) {
     return { ...auto, ticks: axisTickValues(auto.min, auto.max, auto.unit), error: "最小值必须小于最大值，当前已临时改用自动范围。", usedFallback: true };
   }
-  const automaticUnit = niceNativeAxis([min, max]).unit;
+  const automaticUnit = side.min === null && side.max === null ? auto.unit : niceNativeAxis([min, max]).unit;
   const unit = side.majorUnit ?? automaticUnit;
   if (!Number.isFinite(unit) || unit <= 0) {
     return { ...auto, ticks: axisTickValues(auto.min, auto.max, auto.unit), error: "主刻度必须大于0，当前已临时改用自动范围。", usedFallback: true };
@@ -2320,7 +2385,7 @@ function nativePptDateUnit(start, end) {
   return 12;
 }
 
-function buildNativePptChart({ chart, xy, visible, start, end, axisSettings = excelAxisSettings(chart), pptx }) {
+function buildNativePptChart({ chart, xy, visible, start, end, axisSettings = blankAxisSettings(), pptx }) {
   const usableIndices = chart.series
     .map((series, index) => visible[index]
       && xy[index].some((point) => point[0] >= start && point[0] <= end) ? index : -1)
@@ -2377,15 +2442,15 @@ function buildNativePptChart({ chart, xy, visible, start, end, axisSettings = ex
   const primarySide = hasPrimary ? "left" : "right";
   const requestedPrimaryAxisSettings = sanitizeAxisSide(axisSettings[primarySide]);
   const primaryAxisResolution = resolveAxisScale(exportDomain(primaryIndices, xy, start, end), requestedPrimaryAxisSettings);
-  const primaryAxisSettings = primaryAxisResolution.usedFallback ? blankAxisSide() : requestedPrimaryAxisSettings;
-  const primaryAxisValues = {};
-  if (Number.isFinite(primaryAxisSettings.min)) primaryAxisValues.valAxisMinVal = primaryAxisSettings.min;
-  if (Number.isFinite(primaryAxisSettings.max)) primaryAxisValues.valAxisMaxVal = primaryAxisSettings.max;
-  if (Number.isFinite(primaryAxisSettings.majorUnit) && primaryAxisSettings.majorUnit > 0) primaryAxisValues.valAxisMajorUnit = primaryAxisSettings.majorUnit;
+  const primaryAxisValues = {
+    valAxisMinVal: primaryAxisResolution.min,
+    valAxisMaxVal: primaryAxisResolution.max,
+    valAxisMajorUnit: primaryAxisResolution.unit,
+  };
   const valAxes = [{
     axisPos: hasPrimary ? "l" : "r",
     ...primaryAxisValues,
-    valAxisLabelFormatCode: nativePptNumberFormat(primarySeries, chart, primarySide),
+    valAxisLabelFormatCode: nativePptNumberFormat(primarySeries, chart, primarySide, primaryAxisResolution.unit),
     valAxisOrientation: primaryInverted ? "maxMin" : "minMax",
     valAxisLabelPos: hasPrimary ? "low" : "high",
     valAxisLabelFontFace: "Microsoft YaHei",
@@ -2406,15 +2471,15 @@ function buildNativePptChart({ chart, xy, visible, start, end, axisSettings = ex
     const rightInverted = secondaryIndices.some((index) => chart.series[index].axisInverted);
     const requestedRightAxisSettings = sanitizeAxisSide(axisSettings.right);
     const rightAxisResolution = resolveAxisScale(exportDomain(secondaryIndices, xy, start, end), requestedRightAxisSettings);
-    const rightAxisSettings = rightAxisResolution.usedFallback ? blankAxisSide() : requestedRightAxisSettings;
-    const rightAxisValues = {};
-    if (Number.isFinite(rightAxisSettings.min)) rightAxisValues.valAxisMinVal = rightAxisSettings.min;
-    if (Number.isFinite(rightAxisSettings.max)) rightAxisValues.valAxisMaxVal = rightAxisSettings.max;
-    if (Number.isFinite(rightAxisSettings.majorUnit) && rightAxisSettings.majorUnit > 0) rightAxisValues.valAxisMajorUnit = rightAxisSettings.majorUnit;
+    const rightAxisValues = {
+      valAxisMinVal: rightAxisResolution.min,
+      valAxisMaxVal: rightAxisResolution.max,
+      valAxisMajorUnit: rightAxisResolution.unit,
+    };
     valAxes.push({
       axisPos: "r",
       ...rightAxisValues,
-      valAxisLabelFormatCode: nativePptNumberFormat(chart.series[secondaryIndices[0]], chart, "right"),
+      valAxisLabelFormatCode: nativePptNumberFormat(chart.series[secondaryIndices[0]], chart, "right", rightAxisResolution.unit),
       valAxisOrientation: rightInverted ? "maxMin" : "minMax",
       valAxisLabelPos: "high",
       valAxisLabelFontFace: "Microsoft YaHei",
@@ -3073,8 +3138,9 @@ function axisInputFactor(chart, side) {
 }
 
 function axisSettingsPanelHtml(chart) {
-  const saved = savedChartAxis(chart);
-  const settings = saved || excelAxisSettings(chart);
+  const saved = savedChartAxisRecord(chart);
+  const mode = saved?.mode || "auto";
+  const settings = mode === "excel" ? excelAxisSettings(chart) : saved?.settings || blankAxisSettings();
   const fields = ["min", "max", "majorUnit"];
   const labels = { min: "最小值", max: "最大值", majorUnit: "主刻度" };
   const sides = ["left", "right"].map((side) => {
@@ -3088,8 +3154,8 @@ function axisSettingsPanelHtml(chart) {
     return `<fieldset class="axis-fieldset" data-axis-group="${side}"><legend>${side === "left" ? "左轴" : "右轴"}${inverted ? " · 倒置" : ""}</legend><small>${escapeHtml(series.map(legendLabelFor).join(" / "))} · ${unitHint}</small><div class="axis-input-grid">${inputs}</div></fieldset>`;
   }).join("");
   return `<section class="axis-settings" hidden aria-label="纵轴范围与主刻度设置">
-    <div class="axis-settings-head"><div><strong>纵轴范围与主刻度</strong><p>默认继承Excel手工设置；留空项按当前时间区间自动。固定范围可能裁掉异常点，网页会提示数量。</p></div><button type="button" data-axis-action="close" aria-label="关闭纵轴设置">关闭</button></div>
-    <form class="axis-settings-form">${sides}<div class="axis-settings-actions"><button type="submit">应用</button><button type="button" data-axis-action="excel">恢复Excel原轴</button><button type="button" data-axis-action="auto">全部自动</button><span class="axis-mode">${saved ? (axisSettingsAreAuto(saved) ? "全部自动" : "自定义纵轴") : "Excel原轴"}</span></div></form>
+    <div class="axis-settings-head"><div><strong>纵轴范围与主刻度</strong><p>默认随当前日期区间和可见序列自动适应，留出少量边距并覆盖全部可见极值；也可手动固定，或切回Excel原轴。</p></div><button type="button" data-axis-action="close" aria-label="关闭纵轴设置">关闭</button></div>
+    <form class="axis-settings-form">${sides}<div class="axis-settings-actions"><button type="submit">应用</button><button type="button" data-axis-action="excel">使用Excel原轴</button><button type="button" data-axis-action="auto">自动适应</button><span class="axis-mode">${axisModeLabel(mode)}</span></div></form>
     <div class="axis-settings-status" aria-live="polite"></div>
   </section>`;
 }
@@ -3108,6 +3174,7 @@ function cardHtml(chart) {
   const isOpen = cardIsOpen(chart);
   const signalClass = chart.signal?.level === "major" ? " is-major" : chart.signal?.level === "marginal" ? " is-marginal" : "";
   const signalLabel = chart.signal?.level === "major" ? "本期明显变化／拐点" : chart.signal?.level === "marginal" ? "本期边际变化" : "";
+  const axisMode = savedChartAxisRecord(chart)?.mode || "auto";
   const bodyId = `chart-body-${chart.id}`;
   return `<article class="chart-card${reportRefs.length ? " report-card" : ""}${signalClass}${isOpen ? "" : " is-collapsed"}" data-chart-id="${escapeHtml(chart.id)}">
     <header class="card-head">
@@ -3133,7 +3200,7 @@ function cardHtml(chart) {
       <button class="size-tool export-tool export-pptx" type="button" data-export-action="pptx" title="下载仅含当前图的原生PowerPoint图表；打开后先点黄色栏“启用编辑”">下载可编辑PPT</button>
       <button class="size-tool export-tool export-copy" type="button" data-export-action="copy" title="直接复制高清图片，不是可编辑的PowerPoint图表；改变图片尺寸时文字会随图片一起缩放">复制高清图</button>
       <button class="size-tool export-tool export-svg" type="button" data-export-action="svg" title="下载含标题、图例、坐标和当前时间区间的SVG矢量图片；改变图片尺寸时文字会随整体缩放">SVG矢量</button>
-      <button class="size-tool axis-toggle" type="button" data-axis-action="toggle" aria-expanded="false" title="调整左轴和右轴的最小值、最大值与主刻度">纵轴设置</button>
+      <button class="size-tool axis-toggle" type="button" data-axis-action="toggle" aria-expanded="false" title="当前为${axisModeLabel(axisMode)}；可调整左轴和右轴的最小值、最大值与主刻度">纵轴 · ${axisModeLabel(axisMode, true)}</button>
       <button class="size-tool size-wide" type="button" data-size-action="wide" aria-pressed="false" title="在半栏和整栏之间切换">宽屏</button>
       <button class="size-tool" type="button" data-size-action="reset" title="恢复默认图表尺寸">重置</button>
       <button class="chart-resizer" type="button" aria-label="调整含图例的图形大小：左右拖动切换半宽或整宽，上下拖动调整高度；方向键也可调整" title="上下拖动调整含图例的图形高度；电脑端左右拖动切换宽度"><strong>拖动调大小</strong><span aria-hidden="true"></span></button>
@@ -3214,7 +3281,9 @@ class CanvasTimeChart {
     this.axisStatus = root.querySelector(".axis-settings-status");
     this.axisMode = root.querySelector(".axis-mode");
     this.axisToggle = root.querySelector("button[data-axis-action=\"toggle\"]");
-    this.axisPreference = savedChartAxis(chart);
+    const savedAxis = savedChartAxisRecord(chart);
+    this.axisModePreference = savedAxis?.mode || "auto";
+    this.axisPreference = savedAxis?.settings || blankAxisSettings();
     this.visible = chart.series.map((series) => series.dataQuality?.level !== "error");
     this.xy = chart.series.map((series) => series.points.map((p) => [Date.parse(p[0]), p[1]]).filter((p) => Number.isFinite(p[0]) && Number.isFinite(p[1])));
     const allTimes = this.xy.flatMap((series) => series.map((p) => p[0]));
@@ -3258,7 +3327,9 @@ class CanvasTimeChart {
   }
 
   currentAxisSettings() {
-    return this.axisPreference || excelAxisSettings(this.chart);
+    return this.axisModePreference === "excel"
+      ? excelAxisSettings(this.chart)
+      : sanitizeAxisSettings(this.axisPreference || blankAxisSettings());
   }
 
   axisIndices(side, visibleOnly = true) {
@@ -3268,7 +3339,7 @@ class CanvasTimeChart {
   }
 
   axisScale(side) {
-    const indices = this.axisIndices(side);
+    const indices = this.axisIndices(side).filter((index) => this.visiblePoints(index).length);
     if (!indices.length) return null;
     return resolveAxisScale(this.domain(indices), this.currentAxisSettings()[side]);
   }
@@ -3281,7 +3352,12 @@ class CanvasTimeChart {
         if (input) input.value = editableAxisNumber(settings?.[side]?.[field], factor);
       }
     }
-    if (this.axisMode) this.axisMode.textContent = this.axisPreference ? (axisSettingsAreAuto(this.axisPreference) ? "全部自动" : "自定义纵轴") : "Excel原轴";
+    const modeLabel = axisModeLabel(this.axisModePreference);
+    if (this.axisMode) this.axisMode.textContent = modeLabel;
+    if (this.axisToggle) {
+      this.axisToggle.textContent = `纵轴 · ${axisModeLabel(this.axisModePreference, true)}`;
+      this.axisToggle.title = `当前为${modeLabel}；可调整左轴和右轴的最小值、最大值与主刻度`;
+    }
   }
 
   readAxisForm() {
@@ -3304,9 +3380,14 @@ class CanvasTimeChart {
     return settings;
   }
 
-  setAxisPreference(settings, message) {
+  setAxisPreference(settings, message, requestedMode = null) {
     this.axisPreference = sanitizeAxisSettings(settings);
-    chartAxisPreferences[this.chart.id] = { signature: chartAxisSignature(this.chart), settings: this.axisPreference };
+    this.axisModePreference = requestedMode || (axisSettingsAreAuto(this.axisPreference) ? "auto" : "custom");
+    chartAxisPreferences[this.chart.id] = {
+      signature: chartAxisSignature(this.chart),
+      mode: this.axisModePreference,
+      settings: this.axisPreference,
+    };
     saveChartAxisPreferences();
     this.writeAxisForm();
     this.schedule();
@@ -3314,12 +3395,11 @@ class CanvasTimeChart {
   }
 
   restoreExcelAxis() {
-    delete chartAxisPreferences[this.chart.id];
-    saveChartAxisPreferences();
-    this.axisPreference = null;
-    this.writeAxisForm();
-    this.schedule();
-    if (this.axisStatus) this.axisStatus.textContent = "已恢复Excel原图的手工轴设置；Excel中留空的项目仍按当前时间区间自动。";
+    this.setAxisPreference(
+      blankAxisSettings(),
+      "已切换为Excel原图的手工轴设置；Excel中留空的项目仍按当前日期区间自动。",
+      "excel",
+    );
   }
 
   toggleAxisPanel(force) {
@@ -3339,17 +3419,17 @@ class CanvasTimeChart {
     const parts = [];
     const warnings = [];
     for (const side of ["left", "right"]) {
-      const indices = this.axisIndices(side);
+      const indices = this.axisIndices(side).filter((index) => this.visiblePoints(index).length);
       if (!indices.length) continue;
       const scale = this.axisScale(side);
       const sample = this.chart.series[indices[0]];
       const clipped = indices.reduce((sum, index) => sum + this.visiblePoints(index).filter((point) => point[1] < scale.min || point[1] > scale.max).length, 0);
-      parts.push(`${side === "left" ? "左" : "右"}轴 ${formatAxisValue(this.chart, side, sample, scale.min)}—${formatAxisValue(this.chart, side, sample, scale.max)}，主刻度 ${formatAxisValue(this.chart, side, sample, scale.unit)}`);
+      parts.push(`${side === "left" ? "左" : "右"}轴 ${formatAxisValue(this.chart, side, sample, scale.min, scale.unit)}—${formatAxisValue(this.chart, side, sample, scale.max, scale.unit)}，主刻度 ${formatAxisValue(this.chart, side, sample, scale.unit, scale.unit)}`);
       if (axisDisplaySpec(this.chart, side).mixedUnits) warnings.push(`${side === "left" ? "左" : "右"}轴的序列原始单位不一致，刻度按原值统一显示`);
       if (scale.error) warnings.push(`${side === "left" ? "左" : "右"}轴：${scale.error}`);
       if (clipped) warnings.push(`${side === "left" ? "左" : "右"}轴有 ${clipped} 个点超出显示范围`);
     }
-    const mode = this.axisPreference ? (axisSettingsAreAuto(this.axisPreference) ? "全部自动" : "自定义") : "Excel原轴";
+    const mode = axisModeLabel(this.axisModePreference);
     this.axisStatus.textContent = `${mode}｜${parts.join("；")}${warnings.length ? `。提示：${warnings.join("；")}。` : "。"}`;
     this.axisStatus.classList.toggle("warn", warnings.length > 0);
   }
@@ -3447,7 +3527,7 @@ class CanvasTimeChart {
       if (!scale) continue;
       clippedTotal += this.axisIndices(side).reduce((sum, index) => sum + this.visiblePoints(index).filter((point) => point[1] < scale.min || point[1] > scale.max).length, 0);
     }
-    slide.addNotes(`来源：${this.chart.sheet} · ${this.chart.shapeName || this.chart.id}\n时间区间：${formatDate(new Date(this.start).toISOString())} 至 ${formatDate(new Date(this.end).toISOString())}\n纵轴模式：${this.axisPreference ? (axisSettingsAreAuto(this.axisPreference) ? "全部自动" : "自定义") : "Excel原轴"}${clippedTotal ? `\n提示：当前区间有${clippedTotal}个点超出固定纵轴显示范围。` : ""}`);
+    slide.addNotes(`来源：${this.chart.sheet} · ${this.chart.shapeName || this.chart.id}\n时间区间：${formatDate(new Date(this.start).toISOString())} 至 ${formatDate(new Date(this.end).toISOString())}\n纵轴模式：${axisModeLabel(this.axisModePreference)}${clippedTotal ? `\n提示：当前区间有${clippedTotal}个点超出固定纵轴显示范围。` : ""}`);
     let pptBlob = await pptx.write({ outputType: "blob", compression: true });
     if (nativeChart.primarySide === "right") pptBlob = await patchRightOnlyPowerPoint(pptBlob);
     downloadBlob(pptBlob, this.exportFilename("pptx"));
@@ -3637,7 +3717,7 @@ class CanvasTimeChart {
     this.axisForm?.addEventListener("submit", (event) => {
       event.preventDefault();
       try {
-        this.setAxisPreference(this.readAxisForm(), "纵轴设置已应用到网页、图片和原生PPT导出。可随时恢复Excel原轴。");
+        this.setAxisPreference(this.readAxisForm(), "纵轴设置已应用到网页、图片和原生PPT导出。可随时改回自动适应或Excel原轴。");
       } catch (error) {
         if (this.axisStatus) {
           this.axisStatus.textContent = `无法应用：${error.message || error}`;
@@ -3651,7 +3731,7 @@ class CanvasTimeChart {
       const action = button.dataset.axisAction;
       if (action === "close") this.toggleAxisPanel(false);
       else if (action === "excel") this.restoreExcelAxis();
-      else if (action === "auto") this.setAxisPreference(blankAxisSettings(), "已切换为全部自动：左右轴随当前时间区间和可见序列缩放。");
+      else if (action === "auto") this.setAxisPreference(blankAxisSettings(), "已切换为自动适应：左右轴随当前日期区间和可见序列缩放，并覆盖全部可见极值。", "auto");
     });
     this.resizeHandle.addEventListener("pointerdown", (event) => this.startSizeResize(event));
     this.resizeHandle.addEventListener("pointermove", (event) => this.moveSizeResize(event));
@@ -3819,26 +3899,14 @@ class CanvasTimeChart {
 
   domain(indices) {
     const values = indices.flatMap((i) => this.visiblePoints(i).map((p) => p[1]));
-    if (!values.length) return [0, 1];
-    let min = Math.min(...values);
-    let max = Math.max(...values);
-    if (min === max) {
-      const pad = Math.abs(min || 1) * 0.08;
-      min -= pad;
-      max += pad;
-    } else {
-      const pad = (max - min) * 0.09;
-      min -= pad;
-      max += pad;
-    }
-    return [min, max];
+    return paddedAxisDomain(values);
   }
 
   drawMain() {
     const { ctx, width, height } = this.prepare(this.canvas);
     if (width < 20 || height < 20) return;
-    const leftIndices = this.chart.series.map((s, i) => s.axis !== "right" && this.visible[i] ? i : -1).filter((i) => i >= 0);
-    const rightIndices = this.chart.series.map((s, i) => s.axis === "right" && this.visible[i] ? i : -1).filter((i) => i >= 0);
+    const leftIndices = this.chart.series.map((s, i) => s.axis !== "right" && this.visible[i] && this.visiblePoints(i).length ? i : -1).filter((i) => i >= 0);
+    const rightIndices = this.chart.series.map((s, i) => s.axis === "right" && this.visible[i] && this.visiblePoints(i).length ? i : -1).filter((i) => i >= 0);
     const leftInverted = leftIndices.some((index) => this.chart.series[index].axisInverted);
     const rightInverted = rightIndices.some((index) => this.chart.series[index].axisInverted);
     const axisSettings = this.currentAxisSettings();
@@ -3847,8 +3915,8 @@ class CanvasTimeChart {
     if (!leftScale && !rightScale) return;
     const axisFont = width < 520 ? "500 12px system-ui, sans-serif" : width > 1000 ? "500 12px system-ui, sans-serif" : "500 11.5px system-ui, sans-serif";
     ctx.font = axisFont;
-    const leftLabelWidth = leftScale ? Math.max(...leftScale.ticks.map((value) => ctx.measureText(formatAxisValue(this.chart, "left", this.chart.series[leftIndices[0]], value)).width)) : 0;
-    const rightLabelWidth = rightScale ? Math.max(...rightScale.ticks.map((value) => ctx.measureText(formatAxisValue(this.chart, "right", this.chart.series[rightIndices[0]], value)).width)) : 0;
+    const leftLabelWidth = leftScale ? Math.max(...leftScale.ticks.map((value) => ctx.measureText(formatAxisValue(this.chart, "left", this.chart.series[leftIndices[0]], value, leftScale.unit)).width)) : 0;
+    const rightLabelWidth = rightScale ? Math.max(...rightScale.ticks.map((value) => ctx.measureText(formatAxisValue(this.chart, "right", this.chart.series[rightIndices[0]], value, rightScale.unit)).width)) : 0;
     const plot = this.plotRect(width, height, leftLabelWidth, rightLabelWidth);
     const x = (t) => plot.left + (t - this.start) / (this.end - this.start) * plot.width;
     const yLeft = (v) => axisY(v, leftScale || rightScale, leftInverted, plot);
@@ -3868,12 +3936,12 @@ class CanvasTimeChart {
     if (leftScale) {
       const leftSeries = this.chart.series[leftIndices[0]];
       ctx.textAlign = "right";
-      for (const value of leftScale.ticks) ctx.fillText(formatAxisValue(this.chart, "left", leftSeries, value), plot.left - 6, axisY(value, leftScale, leftInverted, plot));
+      for (const value of leftScale.ticks) ctx.fillText(formatAxisValue(this.chart, "left", leftSeries, value, leftScale.unit), plot.left - 6, axisY(value, leftScale, leftInverted, plot));
     }
     if (rightScale) {
       const rightSeries = this.chart.series[rightIndices[0]];
       ctx.textAlign = "left";
-      for (const value of rightScale.ticks) ctx.fillText(formatAxisValue(this.chart, "right", rightSeries, value), plot.left + plot.width + 6, axisY(value, rightScale, rightInverted, plot));
+      for (const value of rightScale.ticks) ctx.fillText(formatAxisValue(this.chart, "right", rightSeries, value, rightScale.unit), plot.left + plot.width + 6, axisY(value, rightScale, rightInverted, plot));
     }
 
     ctx.textAlign = "center";
