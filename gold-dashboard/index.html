@@ -1391,12 +1391,12 @@ body.chart-resizing { cursor: nwse-resize; user-select: none; }
       <div class="signal-board-body">
         <section class="signal-group major" aria-labelledby="signal-major-title">
           <h3 id="signal-major-title">明显变化／拐点</h3>
-          <p>优先识别历史波动显著、方向反转或触及一年极值的指标。</p>
+          <p>优先识别历史波动显著、方向反转或触及一年极值的指标；末端罕见精确为 0 的未更新数据不参与判断。</p>
           <div class="signal-list" id="signal-major-list"></div>
         </section>
         <section class="signal-group marginal" aria-labelledby="signal-marginal-title">
           <h3 id="signal-marginal-title">明显边际变化</h3>
-          <p>强度未达拐点档，但变化速度、方向或历史分位已值得跟踪。</p>
+          <p>强度未达拐点档，但变化速度、方向或历史分位已值得跟踪；可疑占位 0 会等待有效值后再恢复统计。</p>
           <div class="signal-list" id="signal-marginal-list"></div>
         </section>
       </div>
@@ -2696,6 +2696,29 @@ function isReferencePriceSeries(series) {
   return /伦敦金|伦敦现货黄金|AuT\+?D|CMXGC|沪金\d|沪金主力|黄金主力|黄金现货/i.test(value);
 }
 
+function terminalPlaceholderZero(points) {
+  const clean = (points || []).filter((point) => point && Number.isFinite(Date.parse(point[0])) && Number.isFinite(point[1]));
+  if (clean.length < 16 || clean.at(-1)[1] !== 0) return null;
+  let zeroCount = 0;
+  for (let index = clean.length - 1; index >= 0 && clean[index][1] === 0; index--) zeroCount++;
+  if (zeroCount > 31 || clean.length - zeroCount < 12) return null;
+  const history = clean.slice(Math.max(0, clean.length - zeroCount - 60), clean.length - zeroCount);
+  const recentNonzero = history.filter((point) => point[1] !== 0).slice(-3);
+  if (recentNonzero.length < 3) return null;
+  const historicalZeroShare = history.filter((point) => point[1] === 0).length / history.length;
+  const nonzero = history.map((point) => Math.abs(point[1])).filter((value) => value > 0);
+  const typicalMagnitude = median(nonzero);
+  const span = Math.max(...history.map((point) => point[1])) - Math.min(...history.map((point) => point[1]));
+  if (historicalZeroShare > .25 || !Number.isFinite(typicalMagnitude)
+    || typicalMagnitude <= Math.max(1e-12, Math.abs(span) * 1e-8)) return null;
+  return {
+    count: zeroCount,
+    firstDate: clean[clean.length - zeroCount][0],
+    lastValidDate: recentNonzero.at(-1)[0],
+    lastValidValue: recentNonzero.at(-1)[1],
+  };
+}
+
 function signalDeltaText(series, delta) {
   if (!Number.isFinite(delta)) return "—";
   const names = [series.rawName, series.name, series.displayName].filter(Boolean).join(" ");
@@ -2731,6 +2754,7 @@ function scoreSeriesSignal(series, capDate) {
   if ((series.dataQuality?.level || "ok") === "error" || (series.dataQuality?.level || "ok") === "stale") return null;
   const points = (series.points || []).filter((point) => point && Number.isFinite(Date.parse(point[0])) && Number.isFinite(point[1]));
   if (points.length < 20) return null;
+  if (terminalPlaceholderZero(points)) return null;
   const cadence = estimateCadence(points);
   const maxAge = Math.max(10, Math.min(62, Math.ceil(cadence * 2.5 + 3)));
   const age = Math.floor((Date.parse(capDate) - Date.parse(points.at(-1)[0])) / DAY);
