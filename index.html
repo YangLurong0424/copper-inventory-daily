@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>ͭ����ձ� - 2026-09-17</title>
+  <title>铜库存日报 - 2026-09-17</title>
   <style>
     :root {
       --bg: #f2f6fb;
@@ -321,10 +321,10 @@
       white-space: nowrap;
     }
     .summary-action::after {
-      content: "չ��";
+      content: "展开";
     }
     details[open] .summary-action::after {
-      content: "����";
+      content: "收起";
     }
     .detail-filter {
       display: flex;
@@ -482,7 +482,7 @@
         setText("visit_total_uv", data.total_uv);
       } catch (error) {
         document.querySelectorAll(".traffic-value").forEach((node) => {
-          node.title = "ʵʱͳ�ƽӿ��ݲ����ã���ǰ��ʾ����ʱ����";
+          node.title = "实时统计接口暂不可用，当前显示发布时快照";
         });
       }
     });
@@ -494,26 +494,26 @@
     <div class="topbar">
       <div>
         <div class="report-date">2026-09-17</div>
-        <h1>ͭ����ձ�</h1>
-        <div class="subtle">��ȥ 15 ����Ч�����գ��������Ѹ���</div>
+        <h1>铜库存日报</h1>
+        <div class="subtle">过去 15 个有效更新日，报告日已高亮</div>
       </div>
       <div class="stamp">
-        ����ʱ�䣺2026-09-18 11:15<br>��Դ�����ñ�����ͼ��Wind����������ҳ
-        <div class="traffic-stats" aria-label="��վ����ͳ��">
+        生成时间：2026-09-18 13:31<br>来源：备用表、截图、Wind、上期所网页
+        <div class="traffic-stats" aria-label="网站访问统计">
           <div class="traffic-chip">
-            <span class="traffic-label">���շ���</span>
+            <span class="traffic-label">今日访问</span>
             <span class="traffic-value" id="visit_today_pv">--</span>
           </div>
           <div class="traffic-chip">
-            <span class="traffic-label">���շÿ�</span>
+            <span class="traffic-label">今日访客</span>
             <span class="traffic-value" id="visit_today_uv">--</span>
           </div>
           <div class="traffic-chip">
-            <span class="traffic-label">�ۼƷ���</span>
+            <span class="traffic-label">累计访问</span>
             <span class="traffic-value" id="visit_total_pv">--</span>
           </div>
           <div class="traffic-chip">
-            <span class="traffic-label">�ۼƷÿ�</span>
+            <span class="traffic-label">累计访客</span>
             <span class="traffic-value" id="visit_total_uv">--</span>
           </div>
         </div>
@@ -523,74 +523,74 @@
     <div class="cards">
       
         <section class="metric-card">
-          <div class="metric-title">���ںϼƣ����ؽ�ͼ��ȫ�� 2026/9/17��</div>
+          <div class="metric-title">国内合计（两地截图齐全至 2026/9/17）</div>
           <div class="metric-value">59,788</div>
-          <div class="metric-delta neg">��ǰһ��Ч�� -1,341</div>
+          <div class="metric-delta neg">较前一有效日 -1,341</div>
         </section>
         
       
         <section class="metric-card">
-          <div class="metric-title">�Ϻ���棨���� 2026/9/17��</div>
+          <div class="metric-title">上海库存（截至 2026/9/17）</div>
           <div class="metric-value">52,659</div>
-          <div class="metric-delta zero">��ǰһ��Ч�� 0</div>
+          <div class="metric-delta zero">较前一有效日 0</div>
         </section>
         
       
         <section class="metric-card">
-          <div class="metric-title">�㶫��棨���� 2026/9/17��</div>
+          <div class="metric-title">广东库存（截至 2026/9/17）</div>
           <div class="metric-value">7,129</div>
-          <div class="metric-delta neg">��ǰһ��Ч�� -1,341</div>
+          <div class="metric-delta neg">较前一有效日 -1,341</div>
         </section>
         
       
         <section class="metric-card">
-          <div class="metric-title">���ڳ���ϼƣ����ؽ�ͼ��ȫ�� 2026/9/17��</div>
+          <div class="metric-title">国内出库合计（两地截图齐全至 2026/9/17）</div>
           <div class="metric-value">13,100</div>
-          <div class="metric-delta neg">��5�վ�ֵ -1,168</div>
+          <div class="metric-delta neg">较5日均值 -1,168</div>
         </section>
         
     </div>
 
     <section class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">ÿ�ձ仯ժҪ</h2>
-        <span class="subtle">��λ����</span>
+        <h2 class="panel-title">每日变化摘要</h2>
+        <span class="subtle">单位：吨</span>
       </div>
       <ul class="notes">
-        <li>�㶫��ϸ���Ѹ��µ� 2026/9/17�����õ��ս�ͼ���ݡ�</li>
-        <li>���ؽ�ͼ��ȫ�չ��ںϼƣ�2026/9/17��59,788 �֣���ǰһ��Ч�� -1,341 �֡�</li>
-        <li>�Ϻ���棨���� 2026/9/17��52,659 �֣���ǰһ��Ч�� 0 �֡�</li>
-        <li>���ڳ���ϼƣ����ؽ�ͼ��ȫ�� 2026/9/17��13,100 �֣��� 5 ����Ч�����վ�ֵ -1,168 �֡�</li>
-        <li>�㶫��� 7,129 �֣���ǰһ��Ч�� -1,341 �֡�</li>
+        <li>广东明细表已更新到 2026/9/17，采用当日截图数据。</li>
+        <li>两地截图齐全日国内合计（2026/9/17）59,788 吨，较前一有效日 -1,341 吨。</li>
+        <li>上海库存（截至 2026/9/17）52,659 吨，较前一有效日 0 吨。</li>
+        <li>国内出库合计（两地截图齐全至 2026/9/17）13,100 吨，较 5 个有效更新日均值 -1,168 吨。</li>
+        <li>广东库存 7,129 吨，较前一有效日 -1,341 吨。</li>
       </ul>
     </section>
 
     
     <section class="panel source-status">
       <div class="panel-head">
-        <h2 class="panel-title">����ԴУ��</h2>
-        <span class="subtle">�������ڣ�2026-09-17</span>
+        <h2 class="panel-title">数据源校验</h2>
+        <span class="subtle">覆盖日期：2026-09-17</span>
       </div>
       <div class="source-status-grid">
-        <div class="source-status-item ok"><span>Wind ����</span><strong>Excel ��ˢ�£�API ���ˣ�</strong></div>
-        <div class="source-status-item ok"><span>��������ҳ</span><strong>��ץȡ</strong></div>
-        <div class="source-status-item ok"><span>�Ϻ���ͼ</span><strong>�Ѹ���</strong></div>
-        <div class="source-status-item ok"><span>�㶫��ͼ</span><strong>�Ѹ���</strong></div>
-        <div class="source-status-item ok"><span>Excel ��ʽ</span><strong>�ѱ�������������</strong></div>
+        <div class="source-status-item ok"><span>Wind 数据</span><strong>API 已刷新</strong></div>
+        <div class="source-status-item ok"><span>上期所网页</span><strong>已抓取</strong></div>
+        <div class="source-status-item ok"><span>上海截图</span><strong>已更新</strong></div>
+        <div class="source-status-item ok"><span>广东截图</span><strong>已更新</strong></div>
+        <div class="source-status-item ok"><span>Excel 公式</span><strong>已保留并设置重算</strong></div>
       </div>
     </section>
     
 
     <section class="panel">
       <div class="panel-head">
-        <h2 class="panel-title">��ȥ 15 ����ϸ</h2>
-        <span class="subtle">�����ڵ������У�������죬�����ռӴָ���</span>
+        <h2 class="panel-title">过去 15 天明细</h2>
+        <span class="subtle">按日期倒序排列；负数标红，报告日加粗高亮</span>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>����</th><th>�Ϻ�<br>���</th><th>�Ϻ�<br>����</th><th>�Ϻ�<br>����</th><th>�Ϻ�5��<br>�����ֵ</th><th>�㶫<br>���</th><th>�㶫<br>����</th><th>�㶫<br>����</th><th>�㶫5��<br>�����ֵ</th><th>����<br>�ϼ�</th><th>����<br>����</th><th>�������<br>5�վ�ֵ</th><th>����<br>����ϼ�</th><th>5��<br>�����ֵ</th>
+              <th>日期</th><th>上海<br>库存</th><th>上海<br>增减</th><th>上海<br>出库</th><th>上海5天<br>出库均值</th><th>广东<br>库存</th><th>广东<br>增减</th><th>广东<br>出库</th><th>广东5天<br>出库均值</th><th>国内<br>合计</th><th>国内<br>增减</th><th>库存增减<br>5日均值</th><th>国内<br>出库合计</th><th>5天<br>出库均值</th>
             </tr>
           </thead>
           <tbody>
@@ -614,29 +614,29 @@
       </div>
     </section>
 
-    <section class="detail-grid" aria-label="�ֿ���ϸ">
+    <section class="detail-grid" aria-label="仓库明细">
       <details class="detail-panel">
         <summary>
           <span class="summary-main">
-            <span class="summary-title">�Ϻ��ֿ���ϸ</span>
-            <span class="subtle">�д����ɡ��ϸ��������д��ϴ��д��������к������������ߴ���ȫ������λ����</span>
+            <span class="summary-title">上海仓库明细</span>
+            <span class="subtle">中储沪闵、上港物流、中储南大、中储吴淞、中海华东、国储七处、全华；单位：吨</span>
           </span>
           <span class="summary-action" aria-hidden="true"></span>
         </summary>
         <div class="detail-inner table-wrap">
-          <div class="detail-filter" aria-label="ѡ���Ϻ��ֿ�">
-            <label class="filter-check wh wh-0"><input id="sh-wh-0" type="checkbox" checked> �д�����</label>
-            <label class="filter-check wh wh-1"><input id="sh-wh-1" type="checkbox" checked> �ϸ�����</label>
-            <label class="filter-check wh wh-2"><input id="sh-wh-2" type="checkbox" checked> �д��ϴ�</label>
-            <label class="filter-check wh wh-3"><input id="sh-wh-3" type="checkbox" checked> �д�����</label>
-            <label class="filter-check wh wh-4"><input id="sh-wh-4" type="checkbox" checked> �к�����</label>
-            <label class="filter-check wh wh-5"><input id="sh-wh-5" type="checkbox" checked> �����ߴ�</label>
-            <label class="filter-check wh wh-6"><input id="sh-wh-6" type="checkbox" checked> ȫ��</label>
+          <div class="detail-filter" aria-label="选择上海仓库">
+            <label class="filter-check wh wh-0"><input id="sh-wh-0" type="checkbox" checked> 中储沪闵</label>
+            <label class="filter-check wh wh-1"><input id="sh-wh-1" type="checkbox" checked> 上港物流</label>
+            <label class="filter-check wh wh-2"><input id="sh-wh-2" type="checkbox" checked> 中储南大</label>
+            <label class="filter-check wh wh-3"><input id="sh-wh-3" type="checkbox" checked> 中储吴淞</label>
+            <label class="filter-check wh wh-4"><input id="sh-wh-4" type="checkbox" checked> 中海华东</label>
+            <label class="filter-check wh wh-5"><input id="sh-wh-5" type="checkbox" checked> 国储七处</label>
+            <label class="filter-check wh wh-6"><input id="sh-wh-6" type="checkbox" checked> 全华</label>
           </div>
           <table class="detail-table shanghai-detail">
             <thead>
               <tr>
-                <th>����</th><th class="wh wh-0 col-sh-0">�д�����<br>���</th><th class="wh wh-0 col-sh-0">�д�����<br>����</th><th class="wh wh-1 col-sh-1">�ϸ�����<br>���</th><th class="wh wh-1 col-sh-1">�ϸ�����<br>����</th><th class="wh wh-2 col-sh-2">�д��ϴ�<br>���</th><th class="wh wh-2 col-sh-2">�д��ϴ�<br>����</th><th class="wh wh-3 col-sh-3">�д�����<br>���</th><th class="wh wh-3 col-sh-3">�д�����<br>����</th><th class="wh wh-4 col-sh-4">�к�����<br>���</th><th class="wh wh-4 col-sh-4">�к�����<br>����</th><th class="wh wh-5 col-sh-5">�����ߴ�<br>���</th><th class="wh wh-5 col-sh-5">�����ߴ�<br>����</th><th class="wh wh-6 col-sh-6">ȫ��<br>���</th><th class="wh wh-6 col-sh-6">ȫ��<br>����</th>
+                <th>日期</th><th class="wh wh-0 col-sh-0">中储沪闵<br>库存</th><th class="wh wh-0 col-sh-0">中储沪闵<br>出库</th><th class="wh wh-1 col-sh-1">上港物流<br>库存</th><th class="wh wh-1 col-sh-1">上港物流<br>出库</th><th class="wh wh-2 col-sh-2">中储南大<br>库存</th><th class="wh wh-2 col-sh-2">中储南大<br>出库</th><th class="wh wh-3 col-sh-3">中储吴淞<br>库存</th><th class="wh wh-3 col-sh-3">中储吴淞<br>出库</th><th class="wh wh-4 col-sh-4">中海华东<br>库存</th><th class="wh wh-4 col-sh-4">中海华东<br>出库</th><th class="wh wh-5 col-sh-5">国储七处<br>库存</th><th class="wh wh-5 col-sh-5">国储七处<br>出库</th><th class="wh wh-6 col-sh-6">全华<br>库存</th><th class="wh wh-6 col-sh-6">全华<br>出库</th>
               </tr>
             </thead>
             <tbody>
@@ -663,28 +663,28 @@
       <details class="detail-panel">
         <summary>
           <span class="summary-main">
-            <span class="summary-title">�㶫�ֿ���ϸ</span>
-            <span class="subtle">��ͼƬ�еĹ㶫����䣻��ͼ����ʾ��ϸ����ͼʱ��ʾΪ�գ������ø���ֵ</span>
+            <span class="summary-title">广东仓库明细</span>
+            <span class="subtle">按图片中的广东表填充；有图则显示明细，无图时显示为空，不采用复制值</span>
           </span>
           <span class="summary-action" aria-hidden="true"></span>
         </summary>
         <div class="detail-inner table-wrap">
-          <div class="detail-filter" aria-label="ѡ��㶫�ֿ�">
-            <label class="filter-check wh wh-0"><input id="gd-wh-0" type="checkbox" checked> ����</label>
-            <label class="filter-check wh wh-1"><input id="gd-wh-1" type="checkbox" checked> �ϴ�</label>
-            <label class="filter-check wh wh-2"><input id="gd-wh-2" type="checkbox" checked> ����830����</label>
-            <label class="filter-check wh wh-3"><input id="gd-wh-3" type="checkbox" checked> ����830����</label>
-            <label class="filter-check wh wh-4"><input id="gd-wh-4" type="checkbox" checked> �����ɽ</label>
-            <label class="filter-check wh wh-5"><input id="gd-wh-5" type="checkbox" checked> �����ϸ�</label>
-            <label class="filter-check wh wh-6"><input id="gd-wh-6" type="checkbox" checked> �������</label>
-            <label class="filter-check wh wh-7"><input id="gd-wh-7" type="checkbox" checked> �����Ϻ�</label>
-            <label class="filter-check wh wh-8"><input id="gd-wh-8" type="checkbox" checked> �����д�</label>
-            <label class="filter-check wh wh-total"><input id="gd-wh-total" type="checkbox" checked> �㶫����ϼ�</label>
+          <div class="detail-filter" aria-label="选择广东仓库">
+            <label class="filter-check wh wh-0"><input id="gd-wh-0" type="checkbox" checked> 粤储</label>
+            <label class="filter-check wh wh-1"><input id="gd-wh-1" type="checkbox" checked> 南储</label>
+            <label class="filter-check wh wh-2"><input id="gd-wh-2" type="checkbox" checked> 国储830黄埔</label>
+            <label class="filter-check wh wh-3"><input id="gd-wh-3" type="checkbox" checked> 国储830增城</label>
+            <label class="filter-check wh wh-4"><input id="gd-wh-4" type="checkbox" checked> 炬申佛山</label>
+            <label class="filter-check wh wh-5"><input id="gd-wh-5" type="checkbox" checked> 广州上港</label>
+            <label class="filter-check wh wh-6"><input id="gd-wh-6" type="checkbox" checked> 炬申广州</label>
+            <label class="filter-check wh wh-7"><input id="gd-wh-7" type="checkbox" checked> 国储南海</label>
+            <label class="filter-check wh wh-8"><input id="gd-wh-8" type="checkbox" checked> 广州中储</label>
+            <label class="filter-check wh wh-total"><input id="gd-wh-total" type="checkbox" checked> 广东出库合计</label>
           </div>
           <table class="detail-table guangdong-detail">
             <thead>
               <tr>
-                <th>����</th><th class="wh wh-0 col-gd-0">����<br>���</th><th class="wh wh-1 col-gd-1">�ϴ�<br>���</th><th class="wh wh-2 col-gd-2">����830����<br>���</th><th class="wh wh-3 col-gd-3">����830����<br>���</th><th class="wh wh-4 col-gd-4">�����ɽ<br>���</th><th class="wh wh-5 col-gd-5">�����ϸ�<br>���</th><th class="wh wh-6 col-gd-6">�������<br>���</th><th class="wh wh-7 col-gd-7">�����Ϻ�<br>���</th><th class="wh wh-8 col-gd-8">�����д�<br>���</th><th class="wh wh-total col-gd-total">�㶫<br>����ϼ�</th>
+                <th>日期</th><th class="wh wh-0 col-gd-0">粤储<br>库存</th><th class="wh wh-1 col-gd-1">南储<br>库存</th><th class="wh wh-2 col-gd-2">国储830黄埔<br>库存</th><th class="wh wh-3 col-gd-3">国储830增城<br>库存</th><th class="wh wh-4 col-gd-4">炬申佛山<br>库存</th><th class="wh wh-5 col-gd-5">广州上港<br>库存</th><th class="wh wh-6 col-gd-6">炬申广州<br>库存</th><th class="wh wh-7 col-gd-7">国储南海<br>库存</th><th class="wh wh-8 col-gd-8">广州中储<br>库存</th><th class="wh wh-total col-gd-total">广东<br>出库合计</th>
               </tr>
             </thead>
             <tbody>
@@ -709,7 +709,7 @@
       </details>
     </section>
 
-    <div class="source">ע��ҳ�水ԭ����ʽ�ھ����㣻6/27 ������ 15 ��չʾ���ڣ����ᰴԭ������ 7/1 �� 5 �վ�ֵ��</div>
+    <div class="source">注：页面按原表公式口径重算；6/27 不进入 15 天展示窗口，但会按原表参与 7/1 的 5 日均值。</div>
   </main>
 </body>
 </html>
